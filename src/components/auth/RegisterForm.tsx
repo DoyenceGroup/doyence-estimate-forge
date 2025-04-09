@@ -1,20 +1,20 @@
 
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, EyeOff } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const RegisterForm = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const navigate = useNavigate();
+  const { signUp, isLoading } = useAuth();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -29,32 +29,12 @@ const RegisterForm = () => {
       return;
     }
     
-    setIsLoading(true);
-    
     try {
-      // In a real app, this would register with a backend
-      // For demo, we'll simulate success and store minimal information
-      localStorage.setItem("doyence_user", JSON.stringify({ 
-        email,
-        isNewUser: true
-      }));
-      
-      toast({
-        title: "Registration successful",
-        description: "Please complete your profile setup to continue.",
-        variant: "default",
-      });
-      
-      navigate("/profile-setup");
+      await signUp(email, password);
+      // The navigation is handled in the AuthContext
     } catch (error) {
-      toast({
-        title: "Registration failed",
-        description: "An error occurred during registration. Please try again.",
-        variant: "destructive",
-      });
+      // Error is handled in AuthContext
       console.error("Registration error:", error);
-    } finally {
-      setIsLoading(false);
     }
   };
 

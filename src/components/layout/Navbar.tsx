@@ -1,6 +1,6 @@
 
-import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { User } from "@/lib/types";
 import {
@@ -11,26 +11,22 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Menu, UserCircle, LogOut, Settings } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface NavbarProps {
   onMobileMenuToggle: () => void;
 }
 
 const Navbar = ({ onMobileMenuToggle }: NavbarProps) => {
-  const [user, setUser] = useState<Partial<User> | null>(null);
-  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+  const [profileData, setProfileData] = useState<Partial<User> | null>(null);
+  
+  // We'll use the user object directly from the auth context
+  // No need to fetch from localStorage
 
-  useEffect(() => {
-    // Get user from localStorage in a real app, this would come from an auth context
-    const userData = localStorage.getItem("doyence_user");
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
-  }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem("doyence_user");
-    navigate("/login");
+  const handleLogout = async () => {
+    await signOut();
+    // Navigation is handled in the AuthContext
   };
 
   return (
@@ -64,22 +60,22 @@ const Navbar = ({ onMobileMenuToggle }: NavbarProps) => {
                   >
                     <UserCircle className="h-6 w-6 text-gray-600" />
                     <span className="hidden sm:inline-block font-medium text-sm">
-                      {user.firstName || "User"}
+                      {user.email?.split('@')[0] || "User"}
                     </span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <div className="px-4 py-3">
                     <p className="text-sm font-medium">
-                      {user.firstName} {user.lastName}
+                      {user.email}
                     </p>
-                    <p className="text-xs text-gray-500 truncate">{user.email}</p>
-                    <p className="text-xs text-gray-500 truncate">{user.companyName}</p>
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     className="cursor-pointer flex items-center gap-2"
-                    onClick={() => navigate("/profile-setup")}
+                    onClick={() => {
+                      window.location.href = "/profile-setup";
+                    }}
                   >
                     <Settings className="h-4 w-4" />
                     <span>Settings</span>

@@ -2,23 +2,25 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ProfileSetupForm from "@/components/auth/ProfileSetup";
+import { useAuth } from "@/contexts/AuthContext";
 
 const ProfileSetup = () => {
   const navigate = useNavigate();
+  const { user, isLoading } = useAuth();
 
   useEffect(() => {
-    // Check if user is logged in
-    const userData = localStorage.getItem("doyence_user");
-    if (!userData) {
+    if (!user && !isLoading) {
       navigate("/login");
-    } else {
-      const user = JSON.parse(userData);
-      // If profile is already completed, redirect to dashboard
-      if (user.profileCompleted) {
-        navigate("/dashboard");
-      }
     }
-  }, [navigate]);
+  }, [user, isLoading, navigate]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="text-center">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
