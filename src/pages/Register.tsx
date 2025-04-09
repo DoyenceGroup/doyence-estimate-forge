@@ -7,6 +7,8 @@ const Register = () => {
   const navigate = useNavigate();
   const { user, isLoading } = useAuth();
   const [searchParams] = useSearchParams();
+
+  // Triggered when redirected after OTP sent
   const isVerification = searchParams.get("verification") === "true";
 
   useEffect(() => {
@@ -36,11 +38,12 @@ const Register = () => {
         </h2>
         {isVerification && (
           <p className="mt-2 text-center text-sm text-gray-600">
-            Please wait while we verify your email address...
+            Please wait while we verify your email address. Check your inbox for the OTP.
           </p>
         )}
       </div>
 
+      {/* Show form only during registration step, not verification step */}
       {!isVerification && (
         <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
           <RegisterForm />
