@@ -1,20 +1,56 @@
 
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import LoginForm from "@/components/auth/LoginForm";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const Login = () => {
   const navigate = useNavigate();
   const { user, isLoading } = useAuth();
+  const [searchParams] = useSearchParams();
+  const { toast } = useToast();
 
   useEffect(() => {
+    // Handle email confirmation redirects
+    const handleEmailConfirmation = async () => {
+      // If there's a hash in URL (from email verification)
+      if (window.location.hash) {
+        try {
+          // Exchange the token in the URL for a session
+          const { data, error } = await supabase.auth.getSession();
+          
+          if (error) {
+            console.error("Error getting session after email confirmation:", error);
+            return;
+          }
+          
+          if (data?.session) {
+            toast({
+              title: "Email confirmed",
+              description: "Your email has been verified. You are now signed in.",
+            });
+            
+            // After successful verification, navigate to profile setup
+            setTimeout(() => {
+              navigate("/profile-setup");
+            }, 500);
+          }
+        } catch (err) {
+          console.error("Error processing email confirmation:", err);
+        }
+      }
+    };
+
+    handleEmailConfirmation();
+    
     // If user is already logged in, redirect to dashboard
     if (user && !isLoading) {
       console.log("User already logged in, redirecting to dashboard");
       navigate("/dashboard");
     }
-  }, [user, isLoading, navigate]);
+  }, [user, isLoading, navigate, toast]);
 
   if (isLoading) {
     return (

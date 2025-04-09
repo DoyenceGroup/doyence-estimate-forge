@@ -26,19 +26,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const { toast } = useToast();
 
   useEffect(() => {
+    console.log("AuthProvider initialized");
+    
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
+      async (event, currentSession) => {
         console.log("Auth state changed:", event, currentSession?.user?.email);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
         // Navigation logic based on auth events
-        if (event === "SIGNED_IN") {
-          // We use setTimeout to avoid Supabase deadlocks
-          setTimeout(() => {
-            checkProfileCompletion(currentSession?.user?.id);
-          }, 0);
+        if (event === "SIGNED_IN" || event === "USER_UPDATED" || event === "TOKEN_REFRESHED") {
+          if (currentSession?.user) {
+            // We use setTimeout to avoid Supabase deadlocks
+            setTimeout(async () => {
+              await checkProfileCompletion(currentSession.user.id);
+            }, 0);
+          }
         } else if (event === "SIGNED_OUT") {
           navigate("/login");
         }
@@ -46,13 +50,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+    supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
       console.log("Initial session check:", currentSession?.user?.email);
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       
       if (currentSession?.user) {
-        checkProfileCompletion(currentSession.user.id);
+        await checkProfileCompletion(currentSession.user.id);
       }
       setIsLoading(false);
     });
@@ -69,7 +73,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log("Checking profile completion for user:", userId);
       const { data, error } = await supabase
         .from('profiles')
-        .select('profile_completed')
+        .select('profile_completed, first_name, last_name')
         .eq('id', userId)
         .single();
         
@@ -80,12 +84,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       console.log("Profile data:", data);
       
-      if (data && !data.profile_completed) {
-        console.log("Profile not complete, navigating to setup");
+      if (!data || (data && !data.first_name && !data.last_name)) {
+        console.log("Profile needs setup, navigating to profile-setup");
         navigate("/profile-setup");
       } else if (data && data.profile_completed) {
         console.log("Profile complete, navigating to dashboard");
         navigate("/dashboard");
+      } else {
+        console.log("Profile exists but incomplete, navigating to profile-setup");
+        navigate("/profile-setup");
       }
     } catch (error) {
       console.error("Error checking profile completion:", error);
@@ -95,8 +102,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signUp = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-      const { error } = await supabase.auth.signUp({ email, password });
+      const { error } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          emailRedirectTo: window.location.origin + '/login'
+        }
+      });
+      
       if (error) throw error;
+      
       toast({
         title: "Account created successfully",
         description: "Please check your email for the confirmation link.",
