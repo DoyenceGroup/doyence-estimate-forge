@@ -9,7 +9,9 @@ const Login = () => {
   const { user, isLoading } = useAuth();
 
   useEffect(() => {
+    // If user is already logged in, redirect to dashboard
     if (user && !isLoading) {
+      console.log("User already logged in, redirecting to dashboard");
       navigate("/dashboard");
     }
   }, [user, isLoading, navigate]);

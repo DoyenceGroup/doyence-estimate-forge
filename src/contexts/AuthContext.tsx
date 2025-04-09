@@ -3,7 +3,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
 interface AuthContextType {
@@ -23,25 +23,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
+        console.log("Auth state changed:", event, currentSession?.user?.email);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
+        // Navigation logic based on auth events
         if (event === "SIGNED_IN") {
           // We use setTimeout to avoid Supabase deadlocks
           setTimeout(() => {
             checkProfileCompletion(currentSession?.user?.id);
           }, 0);
+        } else if (event === "SIGNED_OUT") {
+          navigate("/login");
         }
       }
     );
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      console.log("Initial session check:", currentSession?.user?.email);
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       
@@ -60,16 +66,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (!userId) return;
     
     try {
+      console.log("Checking profile completion for user:", userId);
       const { data, error } = await supabase
         .from('profiles')
         .select('profile_completed')
         .eq('id', userId)
         .single();
         
-      if (error) throw error;
+      if (error) {
+        console.error("Error checking profile:", error);
+        throw error;
+      }
+      
+      console.log("Profile data:", data);
       
       if (data && !data.profile_completed) {
+        console.log("Profile not complete, navigating to setup");
         navigate("/profile-setup");
+      } else if (data && data.profile_completed) {
+        console.log("Profile complete, navigating to dashboard");
+        navigate("/dashboard");
       }
     } catch (error) {
       console.error("Error checking profile completion:", error);
@@ -83,9 +99,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (error) throw error;
       toast({
         title: "Account created successfully",
-        description: "Please complete your profile setup.",
+        description: "Please check your email for the confirmation link.",
       });
-      navigate("/profile-setup");
+      // Don't navigate yet - wait for email confirmation
     } catch (error: any) {
       toast({
         title: "Sign up failed",
@@ -101,13 +117,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      console.log("Signing in with:", email);
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      
       if (error) throw error;
+      
+      console.log("Sign in successful:", data);
       toast({
         title: "Logged in successfully",
         description: "Welcome back to Doyence Estimating!",
       });
+      
+      // The navigation will be handled by onAuthStateChange
     } catch (error: any) {
+      console.error("Sign in error:", error);
       toast({
         title: "Login failed",
         description: error.message || "Invalid email or password.",
@@ -124,7 +147,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsLoading(true);
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      navigate("/login");
+      // Navigation is handled by onAuthStateChange
     } catch (error: any) {
       toast({
         title: "Sign out failed",
