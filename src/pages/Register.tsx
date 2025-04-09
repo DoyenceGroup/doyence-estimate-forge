@@ -1,12 +1,13 @@
-
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import RegisterForm from "@/components/auth/RegisterForm";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Register = () => {
   const navigate = useNavigate();
   const { user, isLoading } = useAuth();
+  const [searchParams] = useSearchParams();
+  const isVerification = searchParams.get("verification") === "true";
 
   useEffect(() => {
     if (user && !isLoading) {
@@ -29,13 +30,22 @@ const Register = () => {
           Doyence Estimating
         </h1>
         <h2 className="text-center text-xl font-semibold text-gray-900">
-          Create a new account
+          {isVerification
+            ? "Verifying your email address"
+            : "Create a new account"}
         </h2>
+        {isVerification && (
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Please wait while we verify your email address...
+          </p>
+        )}
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <RegisterForm />
-      </div>
+      {!isVerification && (
+        <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+          <RegisterForm />
+        </div>
+      )}
     </div>
   );
 };
