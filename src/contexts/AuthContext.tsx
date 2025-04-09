@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -15,6 +14,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   updateProfile: (profileData: any) => Promise<void>;
   isEmailVerified: boolean;
+  isProcessingAuth: boolean; // ✅ ADDED HERE
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,13 +29,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const { toast } = useToast();
 
-  // Centralized navigation logic based on user state
   const handleNavigation = async (userId: string | undefined) => {
     if (!userId) {
       console.log("No user ID for navigation");
       return;
     }
-    
+
     try {
       console.log("Checking profile completion for routing, user:", userId);
       const { data, error } = await supabase
@@ -43,17 +42,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .select('profile_completed, first_name, last_name')
         .eq('id', userId)
         .maybeSingle();
-        
+
       if (error) {
         console.error("Error checking profile during navigation:", error);
         throw error;
       }
-      
+
       console.log("Profile data for routing:", data);
-      
-      // Profile needs setup if either:
-      // 1. No profile data exists
-      // 2. Profile exists but first_name and last_name are both null/empty
+
       if (!data || (data && (!data.first_name && !data.last_name))) {
         console.log("Profile needs setup, navigating to profile-setup");
         navigate("/profile-setup", { replace: true });
@@ -66,23 +62,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     } catch (error) {
       console.error("Error determining navigation path:", error);
-      // On error, default to profile setup as a safe option
       navigate("/profile-setup", { replace: true });
     }
   };
 
-  // Handle email verification from URL
   const handleEmailConfirmation = async () => {
-    // If processing already or no hash, skip
     if (isProcessingAuth || !window.location.hash) return;
-    
+
     try {
       setIsProcessingAuth(true);
       console.log("Processing email verification from URL hash");
-      
-      // Get session after email verification redirect
+
       const { data, error } = await supabase.auth.getSession();
-      
+
       if (error) {
         console.error("Error getting session during email confirmation:", error);
         toast({
@@ -92,19 +84,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         });
         return;
       }
-      
+
       if (data?.session) {
         console.log("Session established after email verification:", data.session.user.email);
         setSession(data.session);
         setUser(data.session.user);
         setIsEmailVerified(true);
-        
+
         toast({
           title: "Email verified",
           description: "Your email has been verified successfully!",
         });
-        
-        // After verification, route to proper page
+
         await handleNavigation(data.session.user.id);
       } else {
         console.log("No session after email verification, user needs to log in");
@@ -119,25 +110,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     console.log("AuthProvider initialized");
-    
-    // Special handling for email verification redirects
     const hasAuthHashParams = window.location.hash && window.location.hash.includes('access_token');
-    if (hasAuthHashParams) {
-      console.log("Detected auth redirect with hash params");
-    }
-    
-    // Set up auth state listener FIRST
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         console.log("Auth state changed:", event, currentSession?.user?.email);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
-        
-        // Handle different auth events
+
         if (event === "SIGNED_IN") {
           if (currentSession?.user) {
             console.log("User signed in, setting up session");
-            // Defer navigation to avoid deadlocks
             setTimeout(async () => {
               await handleNavigation(currentSession.user.id);
             }, 0);
@@ -147,31 +130,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           navigate("/login", { replace: true });
         } else if (event === "USER_UPDATED") {
           console.log("User updated event received");
-          // No immediate navigation on update
         }
       }
     );
 
-    // THEN check for existing session
     const initializeAuth = async () => {
       try {
         console.log("Checking for existing session");
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         console.log("Initial session check:", currentSession?.user?.email);
-        
+
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
-        
-        // If we have a session and we're not on login/register pages,
-        // ensure the user is properly routed
-        if (currentSession?.user && 
-            !location.pathname.includes('/login') && 
-            !location.pathname.includes('/register')) {
+
+        if (currentSession?.user &&
+          !location.pathname.includes('/login') &&
+          !location.pathname.includes('/register')) {
           console.log("User has session, checking navigation path");
           await handleNavigation(currentSession.user.id);
         }
-        
-        // Special case for email verification
+
         if (hasAuthHashParams) {
           await handleEmailConfirmation();
         }
@@ -194,16 +172,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       setIsLoading(true);
       console.log("Attempting sign up for:", email);
-      const { error } = await supabase.auth.signUp({ 
-        email, 
+      const { error } = await supabase.auth.signUp({
+        email,
         password,
         options: {
           emailRedirectTo: window.location.origin + '/login?verification=true'
         }
       });
-      
+
       if (error) throw error;
-      
+
       console.log("Sign up successful, verification email sent");
       toast({
         title: "Account created successfully",
@@ -228,16 +206,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsLoading(true);
       console.log("Attempting sign in for:", email);
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      
+
       if (error) throw error;
-      
+
       console.log("Sign in successful:", data.user?.email);
       toast({
         title: "Logged in successfully",
         description: "Welcome back!",
       });
-      
-      // The navigation will be handled by onAuthStateChange
     } catch (error: any) {
       console.error("Sign in error:", error.message);
       toast({
@@ -257,9 +233,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log("Signing out user");
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      
+
       console.log("Sign out successful");
-      // Navigation is handled by onAuthStateChange
     } catch (error: any) {
       console.error("Sign out error:", error.message);
       toast({
@@ -277,22 +252,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.error("Cannot update profile: No user logged in");
       throw new Error("No user logged in");
     }
-    
+
     try {
       console.log("Updating profile for user:", user.id);
       const { error } = await supabase
         .from('profiles')
         .update(profileData as Database['public']['Tables']['profiles']['Update'])
         .eq("id", user.id);
-        
+
       if (error) throw error;
-      
+
       console.log("Profile updated successfully");
       toast({
         title: "Profile updated successfully",
       });
-      
-      // Only navigate if profile_completed was set to true
+
       if (profileData.profile_completed === true) {
         console.log("Profile completed, navigating to dashboard");
         navigate("/dashboard", { replace: true });
@@ -308,11 +282,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const value = {
+  const value: AuthContextType = {
     session,
     user,
     isLoading,
     isEmailVerified,
+    isProcessingAuth, // ✅ RETURNED HERE
     signUp,
     signIn,
     signOut,
