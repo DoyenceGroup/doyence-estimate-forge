@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 
 const LoginForm = () => {
   const [email, setEmail] = useState("");
@@ -16,59 +15,17 @@ const LoginForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const { signIn, isLoading } = useAuth();
   const { toast } = useToast();
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-
-  // Check for email verification
-  const checkEmailVerification = async () => {
-    const redirectType = searchParams.get('type');
-    
-    if (redirectType === 'signup' || redirectType === 'recovery') {
-      try {
-        const { data, error } = await supabase.auth.getSession();
-        if (error) {
-          throw error;
-        }
-        
-        if (data?.session) {
-          toast({
-            title: "Email verified successfully",
-            description: "Your account has been verified. Please complete your profile.",
-          });
-          
-          // After successful verification, navigate to profile setup
-          setTimeout(() => {
-            navigate("/profile-setup");
-          }, 500);
-          return true;
-        }
-      } catch (error: any) {
-        console.error("Email verification error:", error);
-        toast({
-          title: "Verification failed",
-          description: error.message || "There was an error verifying your email. Please try logging in.",
-          variant: "destructive",
-        });
-      }
-    }
-    return false;
-  };
-
-  // Call the verification check when component mounts
-  useState(() => {
-    checkEmailVerification();
-  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     try {
-      console.log("Submitting login form", email);
+      console.log("Login form: Submitting credentials for:", email);
       await signIn(email, password);
-      // Navigation is handled in the AuthContext
+      // Navigation is handled entirely by AuthContext
     } catch (error) {
       // Error is handled in AuthContext
-      console.error("Login error:", error);
+      console.error("Login form: Error during login process");
     }
   };
 

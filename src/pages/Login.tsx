@@ -3,54 +3,22 @@ import { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import LoginForm from "@/components/auth/LoginForm";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 
 const Login = () => {
   const navigate = useNavigate();
   const { user, isLoading } = useAuth();
   const [searchParams] = useSearchParams();
-  const { toast } = useToast();
+  const isVerification = searchParams.get('verification') === 'true';
 
   useEffect(() => {
-    // Handle email confirmation redirects
-    const handleEmailConfirmation = async () => {
-      // If there's a hash in URL (from email verification)
-      if (window.location.hash) {
-        try {
-          // Exchange the token in the URL for a session
-          const { data, error } = await supabase.auth.getSession();
-          
-          if (error) {
-            console.error("Error getting session after email confirmation:", error);
-            return;
-          }
-          
-          if (data?.session) {
-            toast({
-              title: "Email confirmed",
-              description: "Your email has been verified. You are now signed in.",
-            });
-            
-            // After successful verification, navigate to profile setup
-            setTimeout(() => {
-              navigate("/profile-setup");
-            }, 500);
-          }
-        } catch (err) {
-          console.error("Error processing email confirmation:", err);
-        }
-      }
-    };
-
-    handleEmailConfirmation();
-    
     // If user is already logged in, redirect to dashboard
+    // This handling is secondary to the AuthContext navigation
+    // but provides a fallback
     if (user && !isLoading) {
-      console.log("User already logged in, redirecting to dashboard");
-      navigate("/dashboard");
+      console.log("Login page: User already logged in, redirecting to dashboard");
+      navigate("/dashboard", { replace: true });
     }
-  }, [user, isLoading, navigate, toast]);
+  }, [user, isLoading, navigate]);
 
   if (isLoading) {
     return (
@@ -67,8 +35,15 @@ const Login = () => {
           Doyence Estimating
         </h1>
         <h2 className="text-center text-xl font-semibold text-gray-900">
-          Log in to your account
+          {isVerification 
+            ? "Your email is being verified" 
+            : "Log in to your account"}
         </h2>
+        {isVerification && (
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Please wait while we verify your email address...
+          </p>
+        )}
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
