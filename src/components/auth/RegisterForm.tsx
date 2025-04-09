@@ -1,11 +1,17 @@
-
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -14,12 +20,13 @@ const RegisterForm = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const { signUp, isLoading } = useAuth();
+  const { signUp, isLoading, supabase } = useAuth(); // access Supabase instance
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (password !== confirmPassword) {
       toast({
         title: "Passwords don't match",
@@ -28,13 +35,44 @@ const RegisterForm = () => {
       });
       return;
     }
-    
+
     try {
-      await signUp(email, password);
-      // The navigation is handled in the AuthContext
-    } catch (error) {
-      // Error is handled in AuthContext
-      console.error("Registration error:", error);
+      const { user, error } = await signUp(email, password);
+
+      if (error) {
+        throw error;
+      }
+
+      // ✅ Send OTP email verification
+      const { error: otpError } = await supabase.auth.verifyOtp({
+        email,
+        type: "email",
+      });
+
+      if (otpError) {
+        toast({
+          title: "Failed to send verification email",
+          description: otpError.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Verification email sent",
+        description: "Check your inbox for the OTP code.",
+      });
+
+      // ✅ Redirect to verification screen
+      navigate("/register?verification=true");
+
+    } catch (err: any) {
+      console.error("Registration error:", err);
+      toast({
+        title: "Registration failed",
+        description: err.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -72,9 +110,9 @@ const RegisterForm = () => {
                 className="pr-10"
                 minLength={8}
               />
-              <button 
+              <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)} 
+                onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                 tabIndex={-1}
               >
@@ -95,9 +133,9 @@ const RegisterForm = () => {
                 className="pr-10"
                 minLength={8}
               />
-              <button 
+              <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)} 
+                onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                 tabIndex={-1}
               >
@@ -112,7 +150,10 @@ const RegisterForm = () => {
           </Button>
           <div className="text-sm text-center">
             Already have an account?{" "}
-            <Link to="/login" className="text-primary-600 hover:underline font-medium">
+            <Link
+              to="/login"
+              className="text-primary-600 hover:underline font-medium"
+            >
               Log in
             </Link>
           </div>
