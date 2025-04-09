@@ -5,9 +5,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import VerifyEmail from "./pages/VerifyEmail"; // ✅ NEW OTP PAGE
 import ProfileSetup from "./pages/ProfileSetup";
 import Dashboard from "./pages/Dashboard";
 import Estimates from "./pages/Estimates";
@@ -22,21 +24,19 @@ const AppRoutes = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // If user is logged in and lands on login/register, redirect to profile-setup or dashboard
+    const isOnAuthPage = ["/login", "/register", "/verify"].includes(location.pathname);
+
     if (session) {
-      const isOnAuthPage = ["/login", "/register"].includes(location.pathname);
       if (isOnAuthPage) {
         navigate("/profile-setup");
       }
-    }
 
-    // If user landed via magic link and session is created
-    if (
-      session &&
-      location.hash.includes("access_token") &&
-      location.pathname === "/"
-    ) {
-      navigate("/profile-setup");
+      if (
+        location.hash.includes("access_token") &&
+        location.pathname === "/"
+      ) {
+        navigate("/profile-setup");
+      }
     }
   }, [session, navigate, location]);
 
@@ -45,6 +45,7 @@ const AppRoutes = () => {
       <Route path="/" element={<Index />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/verify" element={<VerifyEmail />} /> {/* ✅ Added route */}
       <Route path="/profile-setup" element={<ProfileSetup />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/estimates" element={<Estimates />} />
