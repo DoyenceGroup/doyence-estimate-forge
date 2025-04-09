@@ -20,9 +20,9 @@ const RegisterForm = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const { signUp, isLoading, supabase } = useAuth(); // access Supabase instance
+  const { signUp, isLoading } = useAuth();
   const { toast } = useToast();
-  const navigate = useNavigate();
+  const navigate = useNavigate(); // 🧭 Add navigation hook
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,42 +37,15 @@ const RegisterForm = () => {
     }
 
     try {
-      const { user, error } = await signUp(email, password);
+      await signUp(email, password);
 
-      if (error) {
-        throw error;
-      }
-
-      // ✅ Send OTP email verification
-      const { error: otpError } = await supabase.auth.verifyOtp({
-        email,
-        type: "email",
+      // ✅ Navigate to OTP verification screen with email
+      navigate("/verify", {
+        state: { email },
       });
-
-      if (otpError) {
-        toast({
-          title: "Failed to send verification email",
-          description: otpError.message,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      toast({
-        title: "Verification email sent",
-        description: "Check your inbox for the OTP code.",
-      });
-
-      // ✅ Redirect to verification screen
-      navigate("/register?verification=true");
-
-    } catch (err: any) {
-      console.error("Registration error:", err);
-      toast({
-        title: "Registration failed",
-        description: err.message || "Something went wrong. Please try again.",
-        variant: "destructive",
-      });
+    } catch (error) {
+      console.error("Registration error:", error);
+      // You can toast an error here if it's not handled in useAuth
     }
   };
 
