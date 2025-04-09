@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import LoginForm from "@/components/auth/LoginForm";
@@ -8,14 +7,11 @@ const Login = () => {
   const navigate = useNavigate();
   const { user, isLoading } = useAuth();
   const [searchParams] = useSearchParams();
-  const isVerification = searchParams.get('verification') === 'true';
+  const isVerification = searchParams.get("verification") === "true";
 
   useEffect(() => {
-    // If user is already logged in, redirect to dashboard
-    // This handling is secondary to the AuthContext navigation
-    // but provides a fallback
-    if (user && !isLoading) {
-      console.log("Login page: User already logged in, redirecting to dashboard");
+    if (!isLoading && user) {
+      console.log("Login page: user already logged in. Redirecting to dashboard...");
       navigate("/dashboard", { replace: true });
     }
   }, [user, isLoading, navigate]);
@@ -35,8 +31,8 @@ const Login = () => {
           Doyence Estimating
         </h1>
         <h2 className="text-center text-xl font-semibold text-gray-900">
-          {isVerification 
-            ? "Your email is being verified" 
+          {isVerification
+            ? "Your email is being verified"
             : "Log in to your account"}
         </h2>
         {isVerification && (
@@ -46,9 +42,11 @@ const Login = () => {
         )}
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <LoginForm />
-      </div>
+      {!isVerification && (
+        <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+          <LoginForm />
+        </div>
+      )}
     </div>
   );
 };
