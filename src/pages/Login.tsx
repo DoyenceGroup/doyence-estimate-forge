@@ -7,6 +7,8 @@ const Login = () => {
   const navigate = useNavigate();
   const { user, isLoading } = useAuth();
   const [searchParams] = useSearchParams();
+
+  // Flag to detect if redirected after email verification
   const isVerification = searchParams.get("verification") === "true";
 
   useEffect(() => {
@@ -35,6 +37,7 @@ const Login = () => {
             ? "Your email is being verified"
             : "Log in to your account"}
         </h2>
+
         {isVerification && (
           <p className="mt-2 text-center text-sm text-gray-600">
             Please wait while we verify your email address...
@@ -42,6 +45,7 @@ const Login = () => {
         )}
       </div>
 
+      {/* Only show login form if we're not in verification state */}
       {!isVerification && (
         <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
           <LoginForm />
