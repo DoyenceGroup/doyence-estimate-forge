@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import LogoUpload from "@/components/ui/logo-upload";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
 const ProfileSetupForm = () => {
   const [firstName, setFirstName] = useState("");
@@ -39,7 +40,6 @@ const ProfileSetupForm = () => {
     setIsLoading(true);
     
     try {
-      // Use type assertion to tell TypeScript this is valid
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -51,7 +51,7 @@ const ProfileSetupForm = () => {
           logo_url: logoUrl,
           profile_completed: true,
           updated_at: new Date().toISOString()
-        } as any)
+        } as Database['public']['Tables']['profiles']['Update'])
         .eq("id", user.id);
       
       if (error) throw error;

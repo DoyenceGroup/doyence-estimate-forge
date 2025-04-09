@@ -4,6 +4,7 @@ import { Session, User } from "@supabase/supabase-js";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import type { Database } from "@/integrations/supabase/types";
 
 interface AuthContextType {
   session: Session | null;
@@ -60,9 +61,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     
     try {
       const { data, error } = await supabase
-        .from("profiles")
-        .select("profile_completed")
-        .eq("id", userId)
+        .from('profiles')
+        .select('profile_completed')
+        .eq('id', userId)
         .single();
         
       if (error) throw error;
@@ -140,8 +141,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     
     try {
       const { error } = await supabase
-        .from("profiles")
-        .update(profileData)
+        .from('profiles')
+        .update(profileData as Database['public']['Tables']['profiles']['Update'])
         .eq("id", user.id);
         
       if (error) throw error;
