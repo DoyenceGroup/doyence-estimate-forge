@@ -39,8 +39,9 @@ const ProfileSetupForm = () => {
     setIsLoading(true);
     
     try {
+      // Use type assertion to tell TypeScript this is valid
       const { error } = await supabase
-        .from("profiles")
+        .from('profiles')
         .update({
           first_name: firstName,
           last_name: lastName,
@@ -50,7 +51,7 @@ const ProfileSetupForm = () => {
           logo_url: logoUrl,
           profile_completed: true,
           updated_at: new Date().toISOString()
-        })
+        } as any)
         .eq("id", user.id);
       
       if (error) throw error;
