@@ -1,9 +1,8 @@
-
 import { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 interface AuthContextType {
   session: Session | null;
@@ -27,6 +26,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // Add flag to prevent navigation conflicts
   const [isNavigating, setIsNavigating] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation(); // Add this to get current location
 
   useEffect(() => {
     console.log("AuthProvider initialized");
@@ -64,6 +64,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             // Wrap in setTimeout to avoid Supabase auth deadlocks
             setTimeout(async () => {
               try {
+                // Don't redirect if the user is on the home page
+                if (location.pathname === "/") {
+                  console.log("User is on home page, skipping redirect");
+                  setIsNavigating(false);
+                  return;
+                }
+                
                 // Check if user has completed their profile
                 const { data: profile } = await supabase
                   .from('profiles')
@@ -97,7 +104,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       listener.subscription.unsubscribe();
     };
-  }, [navigate, isNavigating]);
+  }, [navigate, isNavigating, location.pathname]); // Add location.pathname to dependencies
 
   const signUp = async (email: string, password: string) => {
     console.log("Signing up user:", email);

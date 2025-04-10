@@ -1,3 +1,4 @@
+
 import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -9,7 +10,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import VerifyEmail from "./pages/VerifyEmail"; // ✅ NEW OTP PAGE
+import VerifyEmail from "./pages/VerifyEmail";
 import ProfileSetup from "./pages/ProfileSetup";
 import Dashboard from "./pages/Dashboard";
 import Estimates from "./pages/Estimates";
@@ -27,6 +28,7 @@ const AppRoutes = () => {
     const isOnAuthPage = ["/login", "/register", "/verify"].includes(location.pathname);
 
     if (session) {
+      // Only redirect from auth pages, don't redirect from home page
       if (isOnAuthPage) {
         navigate("/profile-setup");
       }
@@ -45,7 +47,7 @@ const AppRoutes = () => {
       <Route path="/" element={<Index />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      <Route path="/verify" element={<VerifyEmail />} /> {/* ✅ Added route */}
+      <Route path="/verify" element={<VerifyEmail />} />
       <Route path="/profile-setup" element={<ProfileSetup />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/estimates" element={<Estimates />} />
