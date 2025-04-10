@@ -61,6 +61,7 @@ const VerifyEmail = () => {
     
     setIsSubmitting(true);
     try {
+      // Use the verifyOtp function from AuthContext
       await verifyOtp(email, otp);
     } finally {
       setIsSubmitting(false);
@@ -79,6 +80,7 @@ const VerifyEmail = () => {
     
     setIsResending(true);
     try {
+      // Explicitly request resend with type "signup"
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email,

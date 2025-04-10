@@ -11,6 +11,8 @@ interface AuthContextType {
   isLoading: boolean;
   signUp: (email: string, password: string) => Promise<void>;
   verifyOtp: (email: string, token: string) => Promise<void>;
+  // Add signIn alias for signInWithEmailAndPassword to fix build error
+  signIn: (email: string, password: string) => Promise<void>;
   signInWithEmailAndPassword: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   supabase: typeof supabase;
@@ -22,6 +24,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  // Add flag to prevent navigation conflicts
+  const [isNavigating, setIsNavigating] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -51,25 +55,36 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setIsLoading(false);
         
         if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-          if (currentSession?.user) {
+          if (currentSession?.user && !isNavigating) {
             console.log("User signed in, checking profile completion");
+            
+            // Set navigating flag to prevent conflicts
+            setIsNavigating(true);
+            
             // Wrap in setTimeout to avoid Supabase auth deadlocks
             setTimeout(async () => {
-              // Check if user has completed their profile
-              const { data: profile } = await supabase
-                .from('profiles')
-                .select('profile_completed')
-                .eq('id', currentSession.user.id)
-                .single();
+              try {
+                // Check if user has completed their profile
+                const { data: profile } = await supabase
+                  .from('profiles')
+                  .select('profile_completed')
+                  .eq('id', currentSession.user.id)
+                  .single();
+                  
+                console.log("Profile data:", profile);
                 
-              console.log("Profile data:", profile);
-              
-              if (!profile || profile.profile_completed !== true) {
-                console.log("Redirecting to profile setup");
-                navigate("/profile-setup");
-              } else {
-                console.log("Redirecting to dashboard");
-                navigate("/dashboard");
+                if (!profile || profile.profile_completed !== true) {
+                  console.log("Redirecting to profile setup");
+                  navigate("/profile-setup");
+                } else {
+                  console.log("Redirecting to dashboard");
+                  navigate("/dashboard");
+                }
+              } catch (error) {
+                console.error("Error checking profile:", error);
+              } finally {
+                // Release navigation lock
+                setTimeout(() => setIsNavigating(false), 500);
               }
             }, 100);
           }
@@ -82,21 +97,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       listener.subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, [navigate, isNavigating]);
 
   const signUp = async (email: string, password: string) => {
     console.log("Signing up user:", email);
     setIsLoading(true);
     try {
-      // Sign up WITHOUT email confirmation link - we'll use OTP
-      const { error } = await supabase.auth.signUp({
+      // First step: Create the user account without email confirmation
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          // Explicitly disable auto confirmation to force OTP flow
+          emailRedirectTo: undefined,
+          data: {
+            email_confirmed: false
+          }
+        }
       });
 
       if (error) throw error;
+      
+      console.log("User account created, requesting OTP...");
 
-      console.log("User signed up, OTP email sent");
+      // Second step: Explicitly request OTP for the signup flow
+      const { error: otpError } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+      });
+
+      if (otpError) throw otpError;
+
+      console.log("OTP requested and sent to user email");
       
       toast({
         title: "Verification code sent",
@@ -104,7 +136,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
 
       // Navigate to verify page, passing email in state
+      setIsNavigating(true);
       navigate("/verify", { state: { email } });
+      setTimeout(() => setIsNavigating(false), 500);
     } catch (error: any) {
       console.error("Sign-up error:", error.message);
       toast({
@@ -121,6 +155,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     console.log("Verifying OTP for:", email);
     setIsLoading(true);
     try {
+      // Use the correct type "signup" for registration verification
       const { data, error } = await supabase.auth.verifyOtp({
         email,
         token,
@@ -139,6 +174,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
 
       // Let the onAuthStateChange listener handle navigation
+      // It will check profile completion and redirect appropriately
     } catch (error: any) {
       console.error("OTP verification error:", error.message);
       toast({
@@ -151,6 +187,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // Create signInWithEmailAndPassword function
   const signInWithEmailAndPassword = async (email: string, password: string) => {
     console.log("Signing in user:", email);
     setIsLoading(true);
@@ -183,6 +220,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsLoading(false);
     }
   };
+  
+  // Create alias for signIn
+  const signIn = signInWithEmailAndPassword;
 
   const signOut = async () => {
     console.log("Signing out user");
@@ -192,7 +232,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSession(null);
       setUser(null);
       toast({ title: "Signed out", description: "You have been logged out." });
+      
+      setIsNavigating(true);
       navigate("/login");
+      setTimeout(() => setIsNavigating(false), 500);
     } catch (error: any) {
       console.error("Sign-out error:", error.message);
       toast({
@@ -213,6 +256,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         isLoading,
         signUp,
         verifyOtp,
+        signIn, // Add the alias
         signInWithEmailAndPassword,
         signOut,
         supabase,
