@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -67,6 +68,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 // Don't redirect if the user is on the home page
                 if (location.pathname === "/") {
                   console.log("User is on home page, skipping redirect");
+                  setIsNavigating(false);
+                  return;
+                }
+                
+                // Don't redirect from the verification page
+                if (location.pathname === "/verify") {
+                  console.log("User is on verification page, skipping redirect");
                   setIsNavigating(false);
                   return;
                 }

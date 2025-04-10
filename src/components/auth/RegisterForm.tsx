@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -12,7 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 const RegisterForm = () => {
@@ -20,11 +21,13 @@ const RegisterForm = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { signUp, isLoading } = useAuth();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
     if (password !== confirmPassword) {
       toast({
@@ -32,13 +35,18 @@ const RegisterForm = () => {
         description: "Please make sure your passwords match.",
         variant: "destructive",
       });
+      setIsSubmitting(false);
       return;
     }
 
     try {
       await signUp(email, password);
+      // The auth context will handle navigation to verify page
     } catch (error) {
       console.error("Registration error:", error);
+      // Error handling is done in signUp function
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -61,6 +69,7 @@ const RegisterForm = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              disabled={isSubmitting}
             />
           </div>
           <div className="space-y-2">
@@ -75,12 +84,14 @@ const RegisterForm = () => {
                 required
                 className="pr-10"
                 minLength={8}
+                disabled={isSubmitting}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                 tabIndex={-1}
+                disabled={isSubmitting}
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -98,12 +109,14 @@ const RegisterForm = () => {
                 required
                 className="pr-10"
                 minLength={8}
+                disabled={isSubmitting}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                 tabIndex={-1}
+                disabled={isSubmitting}
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -111,8 +124,15 @@ const RegisterForm = () => {
           </div>
         </CardContent>
         <CardFooter className="flex flex-col space-y-4">
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Creating account..." : "Register"}
+          <Button type="submit" className="w-full" disabled={isSubmitting || isLoading}>
+            {isSubmitting ? (
+              <span className="flex items-center justify-center">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating account...
+              </span>
+            ) : (
+              "Register"
+            )}
           </Button>
           <div className="text-sm text-center">
             Already have an account?{" "}
