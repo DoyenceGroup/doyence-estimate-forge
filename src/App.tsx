@@ -28,7 +28,7 @@ const AppRoutes = () => {
 
     if (session) {
       if (isOnAuthPage) {
-      //  navigate("/profile-setup");
+        navigate("/profile-setup");
       }
 
       if (
