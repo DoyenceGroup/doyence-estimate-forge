@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +22,6 @@ const RegisterForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const { signUp, isLoading } = useAuth();
   const { toast } = useToast();
-  const navigate = useNavigate(); // 🧭 Add navigation hook
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,14 +37,8 @@ const RegisterForm = () => {
 
     try {
       await signUp(email, password);
-
-      // ✅ Navigate to OTP verification screen with email
-      navigate("/verify", {
-        state: { email },
-      });
     } catch (error) {
       console.error("Registration error:", error);
-      // You can toast an error here if it's not handled in useAuth
     }
   };
 
