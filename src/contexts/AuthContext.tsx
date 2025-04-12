@@ -88,10 +88,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     console.log("Signing up user:", email);
     setIsLoading(true);
     try {
-      // Sign up WITHOUT email confirmation link - we'll use OTP
+      // Sign up WITH explicit OTP verification
       const { error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: undefined, // Disable redirect URL
+          emailOtp: true, // Explicitly enable OTP verification
+        }
       });
 
       if (error) throw error;
