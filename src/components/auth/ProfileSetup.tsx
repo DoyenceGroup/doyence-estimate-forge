@@ -32,7 +32,7 @@ const ProfileSetupForm = () => {
         description: "You must be logged in to complete your profile.",
         variant: "destructive",
       });
-      navigate("/login");
+      navigate("/login", { replace: true });
       return;
     }
     
@@ -41,7 +41,6 @@ const ProfileSetupForm = () => {
     try {
       console.log("Updating profile for user:", user.id);
       
-      // Fix: Remove the type casting that was causing the error
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -65,10 +64,11 @@ const ProfileSetupForm = () => {
         description: "Your account is ready to use.",
       });
       
+      // Use replace instead of push to prevent back navigation issues
       // Add a small delay to ensure the toast is shown before navigation
       setTimeout(() => {
-        navigate("/dashboard");
-      }, 500);
+        navigate("/dashboard", { replace: true });
+      }, 800); // Slightly longer delay to ensure the transition is smooth
     } catch (error: any) {
       toast({
         title: "Profile setup failed",
