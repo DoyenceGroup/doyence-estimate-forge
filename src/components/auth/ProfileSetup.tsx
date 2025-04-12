@@ -1,7 +1,7 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,8 +21,31 @@ const ProfileSetupForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   
   const navigate = useNavigate();
-  const { toast } = useToast();
   const { user } = useAuth();
+
+  // Check if profile already exists and prepopulate form
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user?.id) return;
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, company_name, phone_number, website, logo_url')
+        .eq('id', user.id)
+        .single();
+        
+      if (data && !error) {
+        setFirstName(data.first_name || "");
+        setLastName(data.last_name || "");
+        setCompanyName(data.company_name || "");
+        setPhoneNumber(data.phone_number || "");
+        setWebsite(data.website || "");
+        setLogoUrl(data.logo_url);
+      }
+    };
+    
+    fetchProfile();
+  }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,7 +65,8 @@ const ProfileSetupForm = () => {
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({
+        .upsert({
+          id: user.id,
           first_name: firstName,
           last_name: lastName,
           company_name: companyName,
@@ -51,8 +75,7 @@ const ProfileSetupForm = () => {
           logo_url: logoUrl,
           profile_completed: true,
           updated_at: new Date().toISOString()
-        } as Database['public']['Tables']['profiles']['Update'])
-        .eq("id", user.id);
+        } as Database['public']['Tables']['profiles']['Update']);
       
       if (error) throw error;
       
@@ -60,7 +83,22 @@ const ProfileSetupForm = () => {
         title: "Profile setup complete",
         description: "Your account is ready to use.",
       });
+
+      // Update user info in localStorage for Dashboard usage
+      const userInfo = {
+        id: user.id,
+        email: user.email,
+        firstName,
+        lastName,
+        companyName,
+        phoneNumber,
+        website,
+        logoUrl
+      };
       
+      localStorage.setItem("doyence_user", JSON.stringify(userInfo));
+      
+      // Redirect to dashboard after successful setup
       navigate("/dashboard");
     } catch (error: any) {
       toast({

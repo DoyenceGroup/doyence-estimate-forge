@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -13,7 +12,7 @@ const LoginForm = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const { signIn, isLoading } = useAuth();
+  const { signInWithEmailAndPassword, isLoading } = useAuth();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -21,7 +20,7 @@ const LoginForm = () => {
     
     try {
       console.log("Login form: Submitting credentials for:", email);
-      await signIn(email, password);
+      await signInWithEmailAndPassword(email, password);
       // Navigation is handled entirely by AuthContext
     } catch (error) {
       // Error is handled in AuthContext

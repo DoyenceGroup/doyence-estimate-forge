@@ -12,6 +12,7 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<void>;
   verifyOtp: (email: string, token: string) => Promise<void>;
   signInWithEmailAndPassword: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>; // Alias for signInWithEmailAndPassword
   signOut: () => Promise<void>;
   supabase: typeof supabase;
 }
@@ -188,6 +189,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // Create an alias for signInWithEmailAndPassword called signIn
+  const signIn = signInWithEmailAndPassword;
+
   const signOut = async () => {
     console.log("Signing out user");
     setIsLoading(true);
@@ -218,6 +222,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         signUp,
         verifyOtp,
         signInWithEmailAndPassword,
+        signIn,
         signOut,
         supabase,
       }}
