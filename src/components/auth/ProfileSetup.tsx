@@ -9,7 +9,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import LogoUpload from "@/components/ui/logo-upload";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
 
 const ProfileSetupForm = () => {
   const [firstName, setFirstName] = useState("");
@@ -40,6 +39,9 @@ const ProfileSetupForm = () => {
     setIsLoading(true);
     
     try {
+      console.log("Updating profile for user:", user.id);
+      
+      // Fix: Remove the type casting that was causing the error
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -51,17 +53,22 @@ const ProfileSetupForm = () => {
           logo_url: logoUrl,
           profile_completed: true,
           updated_at: new Date().toISOString()
-        } as Database['public']['Tables']['profiles']['Update'])
+        })
         .eq("id", user.id);
       
       if (error) throw error;
+      
+      console.log("Profile updated successfully, redirecting to dashboard");
       
       toast({
         title: "Profile setup complete",
         description: "Your account is ready to use.",
       });
       
-      navigate("/dashboard");
+      // Add a small delay to ensure the toast is shown before navigation
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 500);
     } catch (error: any) {
       toast({
         title: "Profile setup failed",
