@@ -7,20 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import LogoUpload from "@/components/ui/logo-upload";
-import ProfilePhotoUpload from "@/components/ui/profile-photo-upload";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Briefcase } from "lucide-react";
 
 const ProfileSetupForm = () => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [companyName, setCompanyName] = useState("");
-  const [companyRole, setCompanyRole] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [website, setWebsite] = useState("");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   
   const navigate = useNavigate();
@@ -51,11 +47,9 @@ const ProfileSetupForm = () => {
           first_name: firstName,
           last_name: lastName,
           company_name: companyName,
-          company_role: companyRole,
           phone_number: phoneNumber,
           website,
           logo_url: logoUrl,
-          profile_photo_url: profilePhotoUrl,
           profile_completed: true,
           updated_at: new Date().toISOString()
         })
@@ -97,16 +91,8 @@ const ProfileSetupForm = () => {
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-6">
-          <div className="flex flex-col md:flex-row gap-6 items-center justify-center">
-            <div>
-              <Label className="mb-2 block text-center">Your Photo</Label>
-              <ProfilePhotoUpload onImageUpload={setProfilePhotoUrl} />
-            </div>
-            
-            <div>
-              <Label className="mb-2 block text-center">Company Logo</Label>
-              <LogoUpload onImageUpload={setLogoUrl} />
-            </div>
+          <div className="flex justify-center">
+            <LogoUpload onImageUpload={setLogoUrl} />
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -137,22 +123,6 @@ const ProfileSetupForm = () => {
               id="companyName"
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
-              required
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="companyRole">
-              <div className="flex items-center gap-2">
-                <Briefcase className="h-4 w-4" />
-                <span>Your Role / Position</span>
-              </div>
-            </Label>
-            <Input
-              id="companyRole"
-              placeholder="e.g. Owner, Project Manager, Estimator"
-              value={companyRole}
-              onChange={(e) => setCompanyRole(e.target.value)}
               required
             />
           </div>

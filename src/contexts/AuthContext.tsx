@@ -1,20 +1,12 @@
-
 import { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 
-interface ProfileType {
-  profile_completed: boolean;
-  profile_photo_url?: string | null;
-  company_role?: string | null;
-}
-
 interface AuthContextType {
   session: Session | null;
   user: User | null;
-  profile: ProfileType | null;
   isLoading: boolean;
   signUp: (email: string, password: string) => Promise<void>;
   verifyOtp: (email: string, token: string) => Promise<void>;
@@ -28,72 +20,55 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<ProfileType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     console.log("AuthProvider initialized");
-
+    
     const getSession = async () => {
       const { data, error } = await supabase.auth.getSession();
       if (error) {
         console.error("Error getting session:", error);
       }
-
       if (data?.session) {
         console.log("Initial session found:", data.session.user?.email);
         setSession(data.session);
         setUser(data.session.user);
-
-        const { data: profileData } = await supabase
-          .from("profiles")
-          .select("profile_completed, profile_photo_url, company_role")
-          .eq("id", data.session.user.id)
-          .single();
-
-        setProfile(profileData ?? null);
       } else {
         console.log("No initial session found");
       }
-
       setIsLoading(false);
     };
 
+    // Set up auth state listener first
     const { data: listener } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         console.log("Auth state changed:", event, currentSession?.user?.email);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         setIsLoading(false);
-
-        if (currentSession?.user) {
-          const { data: profileData } = await supabase
-            .from("profiles")
-            .select("profile_completed, profile_photo_url, company_role")
-            .eq("id", currentSession.user.id)
-            .single();
-
-          setProfile(profileData ?? null);
-        }
-
+        
         if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
           if (currentSession?.user) {
+            console.log("User signed in, checking profile completion");
+            // Wrap in setTimeout to avoid Supabase auth deadlocks
             setTimeout(async () => {
+              // Check if user has completed their profile
               const { data: profile } = await supabase
-                .from("profiles")
-                .select("profile_completed, profile_photo_url, company_role")
-                .eq("id", currentSession.user.id)
+                .from('profiles')
+                .select('profile_completed')
+                .eq('id', currentSession.user.id)
                 .single();
-
+                
               console.log("Profile data:", profile);
-
+              
               if (!profile || profile.profile_completed !== true) {
                 console.log("Redirecting to profile setup");
-                navigate("/profile-setup", { replace: true });
+                navigate("/profile-setup");
               } else {
                 console.log("Redirecting to dashboard");
-                navigate("/dashboard", { replace: true });
+                navigate("/dashboard");
               }
             }, 100);
           }
@@ -112,23 +87,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     console.log("Signing up user:", email);
     setIsLoading(true);
     try {
+      // Sign up WITH explicit OTP verification
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: undefined,
-        },
+          emailRedirectTo: undefined, // Disable redirect URL
+        }
       });
 
       if (error) throw error;
 
       console.log("User signed up, OTP email sent");
-
+      
       toast({
         title: "Verification code sent",
         description: "We've sent a verification code to your email.",
       });
 
+      // Navigate to verify page, passing email in state
       navigate("/verify", { state: { email } });
     } catch (error: any) {
       console.error("Sign-up error:", error.message);
@@ -158,19 +135,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSession(data.session);
       setUser(data.session?.user ?? null);
 
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("profile_completed")
-        .eq("id", data.session?.user.id)
-        .single();
-
-      setProfile(profileData ?? null);
-
       toast({
         title: "Email Verified",
         description: "Your email has been verified and you're now signed in.",
       });
 
+      // Let the onAuthStateChange listener handle navigation
     } catch (error: any) {
       console.error("OTP verification error:", error.message);
       toast({
@@ -198,19 +168,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSession(data.session);
       setUser(data.session?.user ?? null);
 
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("profile_completed")
-        .eq("id", data.session?.user.id)
-        .single();
-
-      setProfile(profileData ?? null);
-
       toast({
         title: "Welcome Back",
         description: "You're now logged in.",
       });
 
+      // Let the onAuthStateChange listener handle navigation
     } catch (error: any) {
       console.error("Login error:", error.message);
       toast({
@@ -230,7 +193,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       await supabase.auth.signOut();
       setSession(null);
       setUser(null);
-      setProfile(null);
       toast({ title: "Signed out", description: "You have been logged out." });
       navigate("/login");
     } catch (error: any) {
@@ -250,7 +212,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       value={{
         session,
         user,
-        profile,
         isLoading,
         signUp,
         verifyOtp,
