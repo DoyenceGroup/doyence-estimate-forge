@@ -24,7 +24,7 @@ const VerifyEmail = () => {
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
-  const { verifyOtp, supabase, isLoading, user } = useAuth();
+  const { verifyOtp, supabase, isLoading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -36,12 +36,7 @@ const VerifyEmail = () => {
       console.log("Email found in location state:", stateEmail);
       setEmail(stateEmail);
     }
-    
-    // If user is already verified and authenticated, redirect to dashboard
-    if (user && !isLoading) {
-      navigate("/dashboard");
-    }
-  }, [location, user, isLoading, navigate]);
+  }, [location]);
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,14 +61,7 @@ const VerifyEmail = () => {
     
     setIsSubmitting(true);
     try {
-      // Use the verifyOtp function from AuthContext
       await verifyOtp(email, otp);
-      
-      // After successful verification, the auth context will handle redirect
-      // based on whether the user has completed their profile
-    } catch (error) {
-      // Error handling is done in the verifyOtp function
-      console.error("Verification submission failed", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -91,7 +79,6 @@ const VerifyEmail = () => {
     
     setIsResending(true);
     try {
-      // Explicitly request resend with type "signup"
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email,

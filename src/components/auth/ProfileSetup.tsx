@@ -40,9 +40,6 @@ const ProfileSetupForm = () => {
     setIsLoading(true);
     
     try {
-      console.log("Updating profile for user:", user.id);
-      
-      // Update profile with completed flag
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -59,23 +56,19 @@ const ProfileSetupForm = () => {
       
       if (error) throw error;
       
-      console.log("Profile updated successfully, navigating to dashboard");
-      
       toast({
         title: "Profile setup complete",
         description: "Your account is ready to use.",
       });
       
-      // Ensure profile update is complete before navigation
-      // Force a redirect to dashboard instead of relying on auth listener
-      window.location.href = "/dashboard";
+      navigate("/dashboard");
     } catch (error: any) {
-      console.error("Profile setup error:", error);
       toast({
         title: "Profile setup failed",
         description: error.message || "An error occurred. Please try again.",
         variant: "destructive",
       });
+      console.error("Profile setup error:", error);
     } finally {
       setIsLoading(false);
     }
