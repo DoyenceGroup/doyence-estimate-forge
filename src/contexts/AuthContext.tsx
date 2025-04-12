@@ -1,13 +1,20 @@
+
 import { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 
+interface ProfileType {
+  profile_completed: boolean;
+  profile_photo_url?: string | null;
+  company_role?: string | null;
+}
+
 interface AuthContextType {
   session: Session | null;
   user: User | null;
-  profile: { profile_completed: boolean } | null;
+  profile: ProfileType | null;
   isLoading: boolean;
   signUp: (email: string, password: string) => Promise<void>;
   verifyOtp: (email: string, token: string) => Promise<void>;
@@ -21,7 +28,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<{ profile_completed: boolean } | null>(null);
+  const [profile, setProfile] = useState<ProfileType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -41,7 +48,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         const { data: profileData } = await supabase
           .from("profiles")
-          .select("profile_completed")
+          .select("profile_completed, profile_photo_url, company_role")
           .eq("id", data.session.user.id)
           .single();
 
@@ -63,7 +70,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (currentSession?.user) {
           const { data: profileData } = await supabase
             .from("profiles")
-            .select("profile_completed")
+            .select("profile_completed, profile_photo_url, company_role")
             .eq("id", currentSession.user.id)
             .single();
 
@@ -75,7 +82,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setTimeout(async () => {
               const { data: profile } = await supabase
                 .from("profiles")
-                .select("profile_completed")
+                .select("profile_completed, profile_photo_url, company_role")
                 .eq("id", currentSession.user.id)
                 .single();
 
@@ -83,10 +90,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
               if (!profile || profile.profile_completed !== true) {
                 console.log("Redirecting to profile setup");
-                navigate("/profile-setup");
+                navigate("/profile-setup", { replace: true });
               } else {
                 console.log("Redirecting to dashboard");
-                navigate("/dashboard");
+                navigate("/dashboard", { replace: true });
               }
             }, 100);
           }
