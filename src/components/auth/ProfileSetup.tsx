@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -8,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import LogoUpload from "@/components/ui/logo-upload";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 
 const ProfileSetupForm = () => {
   const [firstName, setFirstName] = useState("");
@@ -64,11 +63,9 @@ const ProfileSetupForm = () => {
         description: "Your account is ready to use.",
       });
       
-      // Use replace instead of push to prevent back navigation issues
-      // Add a small delay to ensure the toast is shown before navigation
       setTimeout(() => {
         navigate("/dashboard", { replace: true });
-      }, 800); // Slightly longer delay to ensure the transition is smooth
+      }, 800);
     } catch (error: any) {
       toast({
         title: "Profile setup failed",

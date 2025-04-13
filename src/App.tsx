@@ -1,8 +1,7 @@
-
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import Dashboard from "@/pages/dashboard";
-import Login from "@/pages/login";
+import Dashboard from "@/pages/Dashboard";
+import Login from "@/pages/Login";
 import Signup from "@/pages/signup";
 import Verify from "@/pages/verify";
 import ProfileSetup from "@/pages/profile-setup";
@@ -25,8 +24,6 @@ const UnauthenticatedOnlyRoute = ({ children }: { children: JSX.Element }) => {
     return <div className="p-8">Loading...</div>;
   }
 
-  // If session exists and profile is completed, go to dashboard
-  // If session exists but profile is not completed, go to profile setup
   if (session) {
     if (profile?.profile_completed) {
       return <Navigate to="/dashboard" replace />;
@@ -35,7 +32,6 @@ const UnauthenticatedOnlyRoute = ({ children }: { children: JSX.Element }) => {
     }
   }
 
-  // No session, show the login/signup page
   return children;
 };
 
@@ -46,17 +42,14 @@ const ProfileRedirect = () => {
     return <div className="p-8">Loading...</div>;
   }
 
-  // No session, go to login
   if (!session) {
     return <Navigate to="/login" replace />;
   }
 
-  // Session exists but profile not completed, go to profile setup
   if (!profile?.profile_completed) {
     return <Navigate to="/profile-setup" replace />;
   }
 
-  // Session exists and profile completed, go to dashboard
   return <Navigate to="/dashboard" replace />;
 };
 

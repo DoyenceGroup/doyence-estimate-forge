@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { 
@@ -18,7 +17,7 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 
 const Verify = () => {
   const [otp, setOtp] = useState("");
@@ -31,7 +30,6 @@ const Verify = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // Get email from location state (passed from registration)
     const stateEmail = location.state?.email;
     if (stateEmail) {
       console.log("Email found in location state:", stateEmail);
