@@ -1,7 +1,8 @@
+
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import Dashboard from "@/pages/Dashboard";
-import Login from "@/pages/Login";
+import Dashboard from "@/pages/dashboard";
+import Login from "@/pages/login";
 import Signup from "@/pages/signup";
 import Verify from "@/pages/verify";
 import ProfileSetup from "@/pages/profile-setup";
