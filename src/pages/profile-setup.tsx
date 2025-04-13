@@ -3,12 +3,12 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ProfileSetupForm from "@/components/auth/ProfileSetup";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/lib/supabase"; // Updated import path
+import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const ProfileSetup = () => {
   const navigate = useNavigate();
-  const { session, isLoading } = useAuth();
+  const { session, user, isLoading } = useAuth();
   const [isProfileCompleted, setIsProfileCompleted] = useState<boolean | null>(null);
   const [isChecking, setIsChecking] = useState(true);
 
@@ -16,16 +16,16 @@ const ProfileSetup = () => {
   useEffect(() => {
     let isMounted = true;
     const checkProfileStatus = async () => {
-      if (!session?.user?.id) return;
+      if (!user?.id) return;
       
       try {
-        console.log("Checking profile completion status for user:", session.user.id);
+        console.log("Checking profile completion status for user:", user.id);
         setIsChecking(true);
         
         const { data, error } = await supabase
           .from('profiles')
           .select('profile_completed')
-          .eq('user_id', session.user.id)
+          .eq("id", user.id)
           .single();
         
         if (error) {
@@ -56,7 +56,7 @@ const ProfileSetup = () => {
     };
     
     // Only check profile status if we have a user and auth is done loading
-    if (session?.user?.id && !isLoading) {
+    if (user?.id && !isLoading) {
       checkProfileStatus();
     } else if (!isLoading) {
       setIsChecking(false);
@@ -65,15 +65,15 @@ const ProfileSetup = () => {
     return () => {
       isMounted = false;
     };
-  }, [session, isLoading, navigate]);
+  }, [user, isLoading, navigate]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
-    if (!session?.user?.id && !isLoading && !isChecking) {
+    if (!user && !isLoading && !isChecking) {
       console.log("No user found, redirecting to login");
       navigate("/login", { replace: true });
     }
-  }, [session, isLoading, isChecking, navigate]);
+  }, [user, isLoading, isChecking, navigate]);
 
   if (isLoading || isChecking || isProfileCompleted === null) {
     return (

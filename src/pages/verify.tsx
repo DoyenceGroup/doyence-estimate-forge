@@ -110,9 +110,11 @@ const Verify = () => {
     
     setIsSubmitting(true);
     try {
+      console.log("Verifying OTP for email:", email);
       await verifyOtp(email, otp);
-      // Navigation is handled in the AuthContext
+      // Navigation to profile setup is now handled in the AuthContext verifyOtp function
     } catch (error) {
+      console.error("Error during verification:", error);
       setIsSubmitting(false);
     }
   };

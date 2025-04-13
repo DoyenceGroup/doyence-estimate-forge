@@ -26,7 +26,7 @@ const ProfileSetupForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!session?.user?.id) {
+    if (!user?.id) {
       toast({
         title: "Authentication error",
         description: "You must be logged in to complete your profile.",
@@ -39,8 +39,7 @@ const ProfileSetupForm = () => {
     setIsLoading(true);
     
     try {
-      const userId = session.user.id;
-      console.log("Updating profile for user:", userId);
+      console.log("Updating profile for user:", user.id);
       
       const { error } = await supabase
         .from('profiles')
@@ -55,7 +54,7 @@ const ProfileSetupForm = () => {
           profile_completed: true,
           updated_at: new Date().toISOString()
         })
-        .eq("email", session.user.email);
+        .eq("id", user.id);
       
       if (error) throw error;
       

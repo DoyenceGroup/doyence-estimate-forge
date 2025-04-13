@@ -85,26 +85,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Fetch profile whenever user/session changes
   useEffect(() => {
     const fetchProfile = async () => {
-      if (!user?.email) {
-        console.warn("User email missing from session");
+      if (!user?.id) {
+        console.warn("User ID missing from session");
         return;
       }
 
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("email", user.email)
-        .single();
+      try {
+        // Query by user_id instead of email
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .single();
 
-      if (error) {
-        console.error("Error fetching profile:", error);
-        toast({
-          variant: "destructive",
-          title: "Failed to load profile",
-        });
-      } else {
-        setProfile(data);
+        if (error) {
+          console.error("Error fetching profile:", error);
+          toast({
+            variant: "destructive",
+            title: "Failed to load profile",
+          });
+        } else {
+          console.log("Profile data fetched:", data);
+          setProfile(data);
+        }
+      } catch (err) {
+        console.error("Error in profile fetch:", err);
       }
 
       setIsLoading(false);
@@ -205,7 +211,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const verifyOtp = async (email: string, token: string) => {
     try {
       setIsLoading(true);
-      const { error } = await supabase.auth.verifyOtp({
+      const { data, error } = await supabase.auth.verifyOtp({
         email,
         token,
         type: 'signup'
@@ -218,21 +224,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description: "Your email has been successfully verified.",
       });
       
-      // Sign in the user automatically after verification
-      const { error: signInError } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          shouldCreateUser: false,
-        }
-      });
-      
-      if (signInError) {
-        console.error("Auto sign-in error:", signInError);
-        // Navigate to login page even if auto sign-in fails
-        navigate("/login", { 
-          replace: true,
-          state: { verified: true }
-        });
+      // After verification, sign in the user automatically
+      if (data.user) {
+        // Navigate to profile setup page after successful verification
+        navigate("/profile-setup", { replace: true });
       }
       
     } catch (error: any) {
