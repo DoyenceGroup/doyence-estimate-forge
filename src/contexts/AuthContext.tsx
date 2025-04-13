@@ -7,7 +7,7 @@ import {
   ReactNode,
 } from "react";
 import { useNavigate } from "react-router-dom";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 
 type UserProfile = {
@@ -31,6 +31,7 @@ type AuthContextType = {
   signUp: (email: string, password: string, metadata?: any) => Promise<void>;
   signOut: () => Promise<void>;
   verifyOtp: (email: string, token: string) => Promise<void>;
+  resendOtp: (email: string) => Promise<void>;
   supabase: typeof supabase;
 };
 
@@ -43,6 +44,7 @@ const AuthContext = createContext<AuthContextType>({
   signUp: async () => {},
   signOut: async () => {},
   verifyOtp: async () => {},
+  resendOtp: async () => {},
   supabase: supabase,
 });
 
@@ -170,6 +172,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         password,
         options: {
           data: metadata,
+          emailRedirectTo: window.location.origin + '/verify',
         },
       });
 
@@ -178,6 +181,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({
         title: "Registration successful",
         description: "Please check your email for verification.",
+      });
+      
+      // Navigate to verify page with email in state
+      navigate('/verify', { 
+        state: { email },
+        replace: true 
       });
     } catch (error: any) {
       console.error("Registration error:", error);
@@ -209,17 +218,60 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description: "Your email has been successfully verified.",
       });
       
-      // Redirect to login page
-      navigate("/login", { 
-        replace: true,
-        state: { verified: true }
+      // Sign in the user automatically after verification
+      const { error: signInError } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: false,
+        }
       });
+      
+      if (signInError) {
+        console.error("Auto sign-in error:", signInError);
+        // Navigate to login page even if auto sign-in fails
+        navigate("/login", { 
+          replace: true,
+          state: { verified: true }
+        });
+      }
+      
     } catch (error: any) {
       console.error("Verification error:", error);
       toast({
         variant: "destructive",
         title: "Verification failed",
         description: error.message || "Please try again with a valid code.",
+      });
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Resend OTP
+  const resendOtp = async (email: string) => {
+    try {
+      setIsLoading(true);
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: {
+          emailRedirectTo: window.location.origin + '/verify',
+        }
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Verification email resent",
+        description: "Please check your email for the verification link.",
+      });
+    } catch (error: any) {
+      console.error("Resend error:", error);
+      toast({
+        variant: "destructive",
+        title: "Failed to resend verification email",
+        description: error.message || "Please try again.",
       });
       throw error;
     } finally {
@@ -264,6 +316,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         signUp,
         signOut,
         verifyOtp,
+        resendOtp,
         supabase,
       }}
     >

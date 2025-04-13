@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -20,12 +21,12 @@ const ProfileSetupForm = () => {
   
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user) {
+    if (!session?.user?.id) {
       toast({
         title: "Authentication error",
         description: "You must be logged in to complete your profile.",
@@ -38,13 +39,15 @@ const ProfileSetupForm = () => {
     setIsLoading(true);
     
     try {
-      console.log("Updating profile for user:", user.id);
+      const userId = session.user.id;
+      console.log("Updating profile for user:", userId);
       
       const { error } = await supabase
         .from('profiles')
         .update({
           first_name: firstName,
           last_name: lastName,
+          full_name: `${firstName} ${lastName}`,
           company_name: companyName,
           phone_number: phoneNumber,
           website,
@@ -52,7 +55,7 @@ const ProfileSetupForm = () => {
           profile_completed: true,
           updated_at: new Date().toISOString()
         })
-        .eq("id", user.id);
+        .eq("email", session.user.email);
       
       if (error) throw error;
       
@@ -63,6 +66,7 @@ const ProfileSetupForm = () => {
         description: "Your account is ready to use.",
       });
       
+      // Allow time for the UI to update before redirecting
       setTimeout(() => {
         navigate("/dashboard", { replace: true });
       }, 800);

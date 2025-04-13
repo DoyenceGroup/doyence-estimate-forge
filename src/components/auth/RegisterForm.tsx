@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -37,6 +38,7 @@ const RegisterForm = () => {
 
     try {
       await signUp(email, password);
+      // Navigation to verify page is handled by AuthContext
     } catch (error) {
       console.error("Registration error:", error);
     }

@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { 
   Card, 
   CardHeader, 
@@ -11,60 +12,71 @@ import {
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { Mail, ArrowRight, Loader2 } from "lucide-react";
+import { Mail, ArrowRight, Loader2, Clock } from "lucide-react";
 import {
   InputOTP,
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
-import { supabase } from "@/lib/supabase";
+
+const OTP_TIMEOUT = 180; // 3 minutes in seconds
 
 const Verify = () => {
   const [otp, setOtp] = useState("");
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
-  const { isLoading } = useAuth();
+  const [timeLeft, setTimeLeft] = useState(OTP_TIMEOUT);
+  const [timerActive, setTimerActive] = useState(false);
+  const { verifyOtp, resendOtp, isLoading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Start or reset the timer
+  const startTimer = useCallback(() => {
+    setTimeLeft(OTP_TIMEOUT);
+    setTimerActive(true);
+  }, []);
+
+  // Format time as MM:SS
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Timer effect
+  useEffect(() => {
+    let interval: number | undefined;
+    
+    if (timerActive && timeLeft > 0) {
+      interval = window.setInterval(() => {
+        setTimeLeft((prevTime) => prevTime - 1);
+      }, 1000);
+    } else if (timeLeft === 0) {
+      setTimerActive(false);
+      toast({
+        title: "OTP expired",
+        description: "The verification code has expired. Please request a new one.",
+        variant: "destructive",
+      });
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [timerActive, timeLeft, toast]);
+
+  // Get email from location state
   useEffect(() => {
     const stateEmail = location.state?.email;
     if (stateEmail) {
       console.log("Email found in location state:", stateEmail);
       setEmail(stateEmail);
+      startTimer(); // Start timer when email is set
     }
-  }, [location]);
-
-  const verifyOtp = async (email: string, otp: string) => {
-    try {
-      const { error } = await supabase.auth.verifyOtp({
-        email,
-        token: otp,
-        type: 'signup'
-      });
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Email verified",
-        description: "Your email has been successfully verified.",
-      });
-      
-      navigate("/login", { 
-        replace: true,
-        state: { verified: true }
-      });
-    } catch (error: any) {
-      console.error("Verification error:", error);
-      toast({
-        variant: "destructive",
-        title: "Verification failed",
-        description: error.message || "Please try again with a valid code.",
-      });
-    }
-  };
+  }, [location, startTimer]);
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,10 +99,20 @@ const Verify = () => {
       return;
     }
     
+    if (!timerActive || timeLeft === 0) {
+      toast({
+        title: "OTP expired",
+        description: "This verification code has expired. Please request a new one.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsSubmitting(true);
     try {
       await verifyOtp(email, otp);
-    } finally {
+      // Navigation is handled in the AuthContext
+    } catch (error) {
       setIsSubmitting(false);
     }
   };
@@ -107,24 +129,10 @@ const Verify = () => {
     
     setIsResending(true);
     try {
-      const { error } = await supabase.auth.resend({
-        type: 'signup',
-        email,
-      });
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Code resent",
-        description: "A new verification code has been sent to your email.",
-      });
-    } catch (error: any) {
+      await resendOtp(email);
+      startTimer(); // Restart the timer after resending
+    } catch (error) {
       console.error("Error resending OTP:", error);
-      toast({
-        title: "Failed to resend code",
-        description: error.message || "Please try again later.",
-        variant: "destructive",
-      });
     } finally {
       setIsResending(false);
     }
@@ -191,18 +199,31 @@ const Verify = () => {
                 </div>
               </div>
               
+              {timerActive && (
+                <div className="flex justify-center items-center gap-2 text-sm text-amber-600 my-2">
+                  <Clock className="h-4 w-4" />
+                  <span>Code expires in: {formatTime(timeLeft)}</span>
+                </div>
+              )}
+              
               <div className="text-sm text-center mt-2">
                 <button
                   type="button"
                   onClick={handleResendOtp}
-                  className="font-medium text-primary-600 hover:text-primary-500 focus:outline-none focus:underline transition ease-in-out duration-150"
-                  disabled={isResending}
+                  disabled={isResending || (timerActive && timeLeft > OTP_TIMEOUT - 30)} // Prevent spam clicking
+                  className={`font-medium focus:outline-none focus:underline transition ease-in-out duration-150 ${
+                    isResending || (timerActive && timeLeft > OTP_TIMEOUT - 30)
+                      ? "text-gray-400 cursor-not-allowed"
+                      : "text-primary-600 hover:text-primary-500"
+                  }`}
                 >
                   {isResending ? (
                     <span className="flex items-center justify-center">
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Sending...
                     </span>
+                  ) : timerActive && timeLeft > OTP_TIMEOUT - 30 ? (
+                    `Wait ${OTP_TIMEOUT - 30 - timeLeft}s before resending`
                   ) : (
                     "Didn't receive a code? Resend"
                   )}
@@ -210,11 +231,11 @@ const Verify = () => {
               </div>
             </CardContent>
             
-            <CardFooter>
+            <CardFooter className="flex flex-col space-y-4">
               <Button 
                 type="submit" 
                 className="w-full" 
-                disabled={isSubmitting || isLoading || otp.length !== 6}
+                disabled={isSubmitting || isLoading || otp.length !== 6 || !timerActive}
               >
                 {isSubmitting ? (
                   <span className="flex items-center justify-center">
@@ -228,6 +249,15 @@ const Verify = () => {
                   </span>
                 )}
               </Button>
+              
+              <div className="text-sm text-center">
+                <Link
+                  to="/login"
+                  className="text-primary-600 hover:underline font-medium"
+                >
+                  Back to Login
+                </Link>
+              </div>
             </CardFooter>
           </form>
         </Card>
