@@ -27,6 +27,11 @@ type AuthContextType = {
   user: any;
   profile: UserProfile | null;
   isLoading: boolean;
+  signInWithEmailAndPassword: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, metadata?: any) => Promise<void>;
+  signOut: () => Promise<void>;
+  verifyOtp: (email: string, token: string) => Promise<void>;
+  supabase: typeof supabase;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -34,6 +39,11 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   profile: null,
   isLoading: true,
+  signInWithEmailAndPassword: async () => {},
+  signUp: async () => {},
+  signOut: async () => {},
+  verifyOtp: async () => {},
+  supabase: supabase,
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -115,7 +125,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (!session) {
         setProfile(null);
-        navigate("/login");
       }
     });
 
@@ -124,7 +133,125 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [navigate]);
 
-  // REMOVED the redirection useEffect that was causing the loop
+  // Sign in with email and password
+  const signInWithEmailAndPassword = async (email: string, password: string) => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Login successful",
+        description: "Welcome back!",
+      });
+    } catch (error: any) {
+      console.error("Login error:", error);
+      toast({
+        variant: "destructive",
+        title: "Login failed",
+        description: error.message || "Please check your credentials and try again.",
+      });
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Sign up with email and password
+  const signUp = async (email: string, password: string, metadata?: any) => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: metadata,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Registration successful",
+        description: "Please check your email for verification.",
+      });
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      toast({
+        variant: "destructive",
+        title: "Registration failed",
+        description: error.message || "Please try again.",
+      });
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Verify OTP for email verification
+  const verifyOtp = async (email: string, token: string) => {
+    try {
+      setIsLoading(true);
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token,
+        type: 'signup'
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Email verified",
+        description: "Your email has been successfully verified.",
+      });
+      
+      // Redirect to login page
+      navigate("/login", { 
+        replace: true,
+        state: { verified: true }
+      });
+    } catch (error: any) {
+      console.error("Verification error:", error);
+      toast({
+        variant: "destructive",
+        title: "Verification failed",
+        description: error.message || "Please try again with a valid code.",
+      });
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Sign out the user
+  const signOut = async () => {
+    try {
+      setIsLoading(true);
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out.",
+      });
+      
+      navigate("/login", { replace: true });
+    } catch (error: any) {
+      console.error("Sign out error:", error);
+      toast({
+        variant: "destructive",
+        title: "Error signing out",
+        description: error.message || "Please try again.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <AuthContext.Provider
@@ -133,6 +260,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         user,
         profile,
         isLoading,
+        signInWithEmailAndPassword,
+        signUp,
+        signOut,
+        verifyOtp,
+        supabase,
       }}
     >
       {children}
