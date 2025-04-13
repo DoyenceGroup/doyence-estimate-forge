@@ -1,3 +1,4 @@
+
 import {
   createContext,
   useContext,
@@ -5,7 +6,7 @@ import {
   useState,
   ReactNode,
 } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/lib/supabase";
 
@@ -15,6 +16,8 @@ type UserProfile = {
   email: string | null;
   full_name: string | null;
   phone_number: string | null;
+  profile_photo_url: string | null;
+  company_role: string | null;
   role: string | null;
   profile_completed: boolean;
 };
@@ -41,7 +44,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const { toast } = useToast();
   const navigate = useNavigate();
-  const location = useLocation();
 
   // Fetch the current session on mount
   useEffect(() => {
@@ -122,18 +124,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [navigate]);
 
-  // 🚀 Redirect to dashboard after profile is completed
-  useEffect(() => {
-    if (
-      !isLoading &&
-      session &&
-      profile?.profile_completed === true &&
-      location.pathname !== "/dashboard" &&
-      location.pathname !== "/verify"
-    ) {
-      navigate("/dashboard");
-    }
-  }, [profile, isLoading, session, location.pathname, navigate]);
+  // REMOVED the redirection useEffect that was causing the loop
 
   return (
     <AuthContext.Provider

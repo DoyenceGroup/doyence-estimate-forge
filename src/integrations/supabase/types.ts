@@ -12,6 +12,7 @@ export type Database = {
       profiles: {
         Row: {
           company_name: string | null
+          company_role: string | null
           created_at: string | null
           first_name: string | null
           id: string
@@ -19,11 +20,13 @@ export type Database = {
           logo_url: string | null
           phone_number: string | null
           profile_completed: boolean | null
+          profile_photo_url: string | null
           updated_at: string | null
           website: string | null
         }
         Insert: {
           company_name?: string | null
+          company_role?: string | null
           created_at?: string | null
           first_name?: string | null
           id: string
@@ -31,11 +34,13 @@ export type Database = {
           logo_url?: string | null
           phone_number?: string | null
           profile_completed?: boolean | null
+          profile_photo_url?: string | null
           updated_at?: string | null
           website?: string | null
         }
         Update: {
           company_name?: string | null
+          company_role?: string | null
           created_at?: string | null
           first_name?: string | null
           id?: string
@@ -43,6 +48,7 @@ export type Database = {
           logo_url?: string | null
           phone_number?: string | null
           profile_completed?: boolean | null
+          profile_photo_url?: string | null
           updated_at?: string | null
           website?: string | null
         }
