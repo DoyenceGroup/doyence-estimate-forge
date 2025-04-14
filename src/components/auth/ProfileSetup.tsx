@@ -41,12 +41,13 @@ const ProfileSetupForm = () => {
     try {
       console.log("Updating profile for user:", user.id);
       
+      // Update the profile data - removing the full_name field from the update operation
       const { error } = await supabase
         .from('profiles')
         .update({
           first_name: firstName,
           last_name: lastName,
-          full_name: `${firstName} ${lastName}`,
+          // Remove full_name field as it doesn't exist in the database schema
           company_name: companyName,
           phone_number: phoneNumber,
           website,
