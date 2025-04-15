@@ -1,4 +1,3 @@
-
 import {
   createContext,
   useContext,
@@ -14,12 +13,19 @@ type UserProfile = {
   id: string;
   user_id: string;
   email: string | null;
-  full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
   phone_number: string | null;
   profile_photo_url: string | null;
   company_role: string | null;
   role: string | null;
   profile_completed: boolean;
+  company_id: string | null;
+  company_name: string | null;
+  company_email: string | null;
+  company_address: string | null;
+  logo_url: string | null;
+  website: string | null;
 };
 
 type AuthContextType = {
@@ -57,7 +63,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Fetch the current session on mount
   useEffect(() => {
     const getSession = async () => {
       setIsLoading(true);
@@ -82,7 +87,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     getSession();
   }, []);
 
-  // Fetch profile whenever user/session changes
   useEffect(() => {
     const fetchProfile = async () => {
       if (!user?.id) {
@@ -92,7 +96,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       setIsLoading(true);
       try {
-        // Query by user_id instead of email
         const { data, error } = await supabase
           .from("profiles")
           .select("*")
@@ -119,11 +122,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (user) {
       fetchProfile();
     } else {
-      setProfile(null); // clear profile if no user
+      setProfile(null);
     }
   }, [user]);
 
-  // Listen to auth state changes
   useEffect(() => {
     const {
       data: { subscription },
@@ -141,7 +143,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [navigate]);
 
-  // Sign in with email and password
   const signInWithEmailAndPassword = async (email: string, password: string) => {
     try {
       setIsLoading(true);
@@ -169,7 +170,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Sign up with email and password
   const signUp = async (email: string, password: string, metadata?: any) => {
     try {
       setIsLoading(true);
@@ -189,7 +189,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description: "Please check your email for verification.",
       });
       
-      // Navigate to verify page with email in state
       navigate('/verify', { 
         state: { email },
         replace: true 
@@ -207,7 +206,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Verify OTP for email verification
   const verifyOtp = async (email: string, token: string) => {
     try {
       setIsLoading(true);
@@ -224,9 +222,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description: "Your email has been successfully verified.",
       });
       
-      // After verification, sign in the user automatically
       if (data.user) {
-        // Navigate to profile setup page after successful verification
         navigate("/profile-setup", { replace: true });
       }
       
@@ -243,7 +239,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
   
-  // Resend OTP
   const resendOtp = async (email: string) => {
     try {
       setIsLoading(true);
@@ -274,7 +269,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Sign out the user
   const signOut = async () => {
     try {
       setIsLoading(true);
