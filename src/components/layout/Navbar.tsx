@@ -74,7 +74,7 @@ const Navbar = ({ onMobileMenuToggle }: NavbarProps) => {
                   <DropdownMenuItem 
                     className="cursor-pointer flex items-center gap-2"
                     onClick={() => {
-                      window.location.href = "/profile-setup";
+                      window.location.href = "/settings";
                     }}
                   >
                     <Settings className="h-4 w-4" />

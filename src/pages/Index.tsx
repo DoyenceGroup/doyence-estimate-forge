@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -41,7 +40,7 @@ const Index = () => {
               <Link to="/login">
                 <Button variant="outline">Log in</Button>
               </Link>
-              <Link to="/register">
+              <Link to="/signup">
                 <Button>Sign up</Button>
               </Link>
             </div>
@@ -68,7 +67,7 @@ const Index = () => {
                 and manage customers all in one place.
               </p>
               <div className="mt-8 sm:max-w-lg sm:mx-auto sm:text-center lg:text-left lg:mx-0">
-                <Link to="/register">
+                <Link to="/signup">
                   <Button size="lg" className="px-8 py-3 rounded-lg flex items-center gap-2">
                     Get Started <ArrowRight size={16} />
                   </Button>
@@ -194,7 +193,7 @@ const Index = () => {
           </div>
 
           <div className="mt-10 text-center">
-            <Link to="/register">
+            <Link to="/signup">
               <Button size="lg" className="px-8 py-3 rounded-lg">
                 Get Started Today
               </Button>

@@ -7,6 +7,7 @@ import Signup from "@/pages/signup";
 import Verify from "@/pages/verify";
 import ProfileSetup from "@/pages/profile-setup";
 import Index from "@/pages/Index";
+import Settings from "@/pages/company/Settings";
 import { Toaster } from "@/components/ui/toaster";
 
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -52,6 +53,14 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute>
           <ProfileSetup />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/settings"
+      element={
+        <ProtectedRoute>
+          <Settings />
         </ProtectedRoute>
       }
     />
