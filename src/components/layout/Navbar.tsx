@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { User } from "@/lib/types";
 import {
@@ -20,6 +20,7 @@ interface NavbarProps {
 const Navbar = ({ onMobileMenuToggle }: NavbarProps) => {
   const { user, signOut } = useAuth();
   const [profileData, setProfileData] = useState<Partial<User> | null>(null);
+  const navigate = useNavigate();
   
   // We'll use the user object directly from the auth context
   // No need to fetch from localStorage
@@ -27,6 +28,10 @@ const Navbar = ({ onMobileMenuToggle }: NavbarProps) => {
   const handleLogout = async () => {
     await signOut();
     // Navigation is handled in the AuthContext
+  };
+
+  const handleSettingsClick = () => {
+    navigate("/settings");
   };
 
   return (
@@ -73,9 +78,7 @@ const Navbar = ({ onMobileMenuToggle }: NavbarProps) => {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     className="cursor-pointer flex items-center gap-2"
-                    onClick={() => {
-                      window.location.href = "/settings";
-                    }}
+                    onClick={handleSettingsClick}
                   >
                     <Settings className="h-4 w-4" />
                     <span>Settings</span>

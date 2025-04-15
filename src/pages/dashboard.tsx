@@ -1,9 +1,10 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, Users, Clock, Wrench, FileSpreadsheet } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import Navbar from "@/components/layout/Navbar";
 
 const Dashboard = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -28,18 +29,8 @@ const Dashboard = () => {
 
   return (
     <div className="h-screen flex flex-col">
-      {/* Navbar placeholder */}
-      <div className="bg-white shadow-sm p-4">
-        <div className="flex justify-between items-center">
-          <h1 className="text-xl font-bold">Doyence Estimating</h1>
-          <button 
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="lg:hidden p-2"
-          >
-            Menu
-          </button>
-        </div>
-      </div>
+      {/* Use the Navbar component with the toggle function */}
+      <Navbar onMobileMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)} />
       
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar placeholder */}
