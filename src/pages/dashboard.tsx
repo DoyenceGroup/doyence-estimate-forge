@@ -57,7 +57,7 @@ const Dashboard = () => {
             {/* Welcome message */}
             <header className="mb-6">
               <h1 className="text-2xl font-bold text-gray-900">
-                Welcome{profile?.full_name ? `, ${profile.full_name}` : ""}!
+                Welcome{profile?.first_name && profile?.last_name ? `, ${profile.first_name} ${profile.last_name}` : ""}!
               </h1>
               <p className="text-gray-600">
                 Here's what's happening with your estimates today.
