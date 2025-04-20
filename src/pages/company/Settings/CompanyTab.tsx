@@ -27,6 +27,7 @@ const CompanyTab = () => {
   // Load company info, including logo, from companies table as the source of truth!
   useEffect(() => {
     if (profile?.company_id) {
+      console.log("[CompanyTab] Loading company data. Profile:", profile);
       setCompanyId(profile.company_id);
 
       // Fetch company details from companies table
@@ -36,7 +37,25 @@ const CompanyTab = () => {
         .eq("id", profile.company_id)
         .maybeSingle()
         .then(({ data: company, error }) => {
-          if (!company || error) return;
+          console.log("[CompanyTab] Company data response:", { company, error });
+          if (error) {
+            console.error("[CompanyTab] Error fetching company data:", error);
+            return;
+          }
+          
+          if (!company) {
+            console.warn("[CompanyTab] No company data found for ID:", profile.company_id);
+            return;
+          }
+
+          console.log("[CompanyTab] Setting company data from DB:", {
+            name: company.name,
+            website: company.website,
+            email: company.email,
+            address: company.address,
+            logo_url: company.logo_url ? "Found (length: " + company.logo_url.length + ")" : "Not found"
+          });
+          
           setCompanyName(company.name || "");
           setWebsite(company.website || "");
           setEmail(company.email || "");
@@ -59,11 +78,22 @@ const CompanyTab = () => {
       });
       return;
     }
+    
+    console.log("[CompanyTab] Starting save company with values:", {
+      companyName,
+      website,
+      email,
+      address,
+      phoneNumber,
+      logoUrl: logoUrl ? `Found (length: ${logoUrl.length})` : "Not found"
+    });
+    
     setIsLoading(true);
 
     try {
+      console.log("[CompanyTab] Updating profile for user:", user.id);
       // Update the local profile's logo_url and phone_number
-      const { error: profileError } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .update({
           phone_number: phoneNumber,
@@ -72,10 +102,12 @@ const CompanyTab = () => {
         })
         .eq("id", user.id);
 
+      console.log("[CompanyTab] Profile update result:", { profileData, profileError });
       if (profileError) throw profileError;
 
+      console.log("[CompanyTab] Updating company:", companyId);
       // Update company in companies table (including logo_url)
-      const { error: companyError } = await supabase
+      const { data: companyData, error: companyError } = await supabase
         .from('companies')
         .update({
           name: companyName,
@@ -87,18 +119,21 @@ const CompanyTab = () => {
         })
         .eq("id", companyId);
 
+      console.log("[CompanyTab] Company update result:", { companyData, companyError });
       if (companyError) throw companyError;
 
       toast({
         title: "Company updated",
         description: "Your company information has been updated successfully.",
       });
-
+      
+      console.log("[CompanyTab] Save completed successfully. Reloading in 400ms...");
       // force reload after save (otherwise logo upload may not appear after save + revisit)
       // (this workaround guarantees logo is fresh if navigating away/back)
       setTimeout(() => window.location.reload(), 400);
 
     } catch (error: any) {
+      console.error("[CompanyTab] Save failed:", error);
       toast({
         title: "Update failed",
         description: error.message || "An error occurred. Please try again.",
@@ -110,8 +145,15 @@ const CompanyTab = () => {
   };
 
   const handleLogoChange = (logo: string | null) => {
+    console.log("[CompanyTab] Logo changed:", logo ? `Received (length: ${logo.length})` : "Removed");
     setLogoUrl(logo);
   };
+
+  // Debug render to track state changes
+  console.log("[CompanyTab] Render state:", { 
+    companyId, 
+    logoUrl: logoUrl ? `Found (length: ${logoUrl.length})` : "Not found"
+  });
 
   return (
     <Card>
