@@ -3,79 +3,59 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Palette } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-interface ThemeColor {
-  id: string;
-  name: string;
-  color: string;
-  category: "blue" | "green" | "purple" | "red" | "neutral" | "special";
-}
+const TAILWIND_PALETTE = [
+  // Blue
+  { id: "blue-50", color: "#eff6ff" }, { id: "blue-100", color: "#dbeafe" }, { id: "blue-200", color: "#bfdbfe" },
+  { id: "blue-300", color: "#93c5fd" }, { id: "blue-400", color: "#60a5fa" }, { id: "blue-500", color: "#3b82f6" },
+  { id: "blue-600", color: "#2563eb" }, { id: "blue-700", color: "#1d4ed8" }, { id: "blue-800", color: "#1e40af" },
+  { id: "blue-900", color: "#1e3a8a" },
+
+  // Green
+  { id: "green-50", color: "#f0fdf4" }, { id: "green-100", color: "#dcfce7" }, { id: "green-200", color: "#bbf7d0" },
+  { id: "green-300", color: "#86efac" }, { id: "green-400", color: "#4ade80" }, { id: "green-500", color: "#22c55e" },
+  { id: "green-600", color: "#16a34a" }, { id: "green-700", color: "#15803d" }, { id: "green-800", color: "#166534" },
+  { id: "green-900", color: "#14532d" },
+
+  // Purple
+  { id: "purple-50", color: "#faf5ff" }, { id: "purple-100", color: "#f3e8ff" }, { id: "purple-200", color: "#e9d5ff" },
+  { id: "purple-300", color: "#d8b4fe" }, { id: "purple-400", color: "#c084fc" }, { id: "purple-500", color: "#a855f7" },
+  { id: "purple-600", color: "#9333ea" }, { id: "purple-700", color: "#7e22ce" }, { id: "purple-800", color: "#6d28d9" },
+  { id: "purple-900", color: "#581c87" },
+
+  // Red
+  { id: "red-50", color: "#fef2f2" }, { id: "red-100", color: "#fee2e2" }, { id: "red-200", color: "#fecaca" },
+  { id: "red-300", color: "#fca5a5" }, { id: "red-400", color: "#f87171" }, { id: "red-500", color: "#ef4444" },
+  { id: "red-600", color: "#dc2626" }, { id: "red-700", color: "#b91c1c" }, { id: "red-800", color: "#991b1b" },
+  { id: "red-900", color: "#7f1d1d" },
+
+  // Gray/Slate for neutral
+  { id: "gray-50", color: "#f9fafb" }, { id: "gray-100", color: "#f3f4f6" }, { id: "gray-200", color: "#e5e7eb" },
+  { id: "gray-300", color: "#d1d5db" }, { id: "gray-400", color: "#9ca3af" }, { id: "gray-500", color: "#6b7280" },
+  { id: "gray-600", color: "#4b5563" }, { id: "gray-700", color: "#374151" }, { id: "gray-800", color: "#1f2937" },
+  { id: "gray-900", color: "#111827" },
+];
+
+const getDefaultColor = () => "blue-500";
 
 const CompanyTheme = () => {
-  // Expanded theme options with multiple shades and categories
-  const themeColors: ThemeColor[] = [
-    // Blue variants
-    { id: "blue-500", name: "Primary Blue", color: "#3183ff", category: "blue" },
-    { id: "blue-600", name: "Deep Blue", color: "#1a62db", category: "blue" },
-    { id: "blue-400", name: "Light Blue", color: "#57a5ff", category: "blue" },
-    { id: "blue-700", name: "Navy Blue", color: "#1a4caf", category: "blue" },
-    { id: "sky-500", name: "Sky Blue", color: "#0ea5e9", category: "blue" },
-    { id: "cyan-500", name: "Cyan", color: "#06b6d4", category: "blue" },
-    
-    // Green variants
-    { id: "green-500", name: "Emerald", color: "#10b981", category: "green" },
-    { id: "green-600", name: "Forest", color: "#059669", category: "green" },
-    { id: "green-400", name: "Mint", color: "#34d399", category: "green" },
-    { id: "green-700", name: "Deep Green", color: "#047857", category: "green" },
-    { id: "lime-500", name: "Lime", color: "#84cc16", category: "green" },
-    { id: "teal-500", name: "Teal", color: "#14b8a6", category: "green" },
-    
-    // Purple variants
-    { id: "purple-500", name: "Purple", color: "#8b5cf6", category: "purple" },
-    { id: "purple-600", name: "Royal Purple", color: "#7c3aed", category: "purple" },
-    { id: "purple-400", name: "Lavender", color: "#a78bfa", category: "purple" },
-    { id: "purple-700", name: "Deep Purple", color: "#6d28d9", category: "purple" },
-    { id: "indigo-500", name: "Indigo", color: "#6366f1", category: "purple" },
-    { id: "violet-500", name: "Violet", color: "#8b5cf6", category: "purple" },
-    
-    // Red & Warm variants
-    { id: "red-500", name: "Red", color: "#ef4444", category: "red" },
-    { id: "red-600", name: "Ruby", color: "#dc2626", category: "red" },
-    { id: "red-400", name: "Coral", color: "#f87171", category: "red" },
-    { id: "pink-500", name: "Pink", color: "#ec4899", category: "red" },
-    { id: "rose-500", name: "Rose", color: "#f43f5e", category: "red" },
-    { id: "amber-500", name: "Amber", color: "#f59e0b", category: "red" },
-    { id: "orange-500", name: "Orange", color: "#f97316", category: "red" },
-    
-    // Neutral variants
-    { id: "slate-700", name: "Slate", color: "#334155", category: "neutral" },
-    { id: "gray-600", name: "Gray", color: "#4b5563", category: "neutral" },
-    { id: "zinc-600", name: "Zinc", color: "#52525b", category: "neutral" },
-    { id: "stone-600", name: "Stone", color: "#57534e", category: "neutral" },
-    { id: "neutral-600", name: "Neutral", color: "#525252", category: "neutral" },
-    
-    // Special colors
-    { id: "fuchsia-500", name: "Fuchsia", color: "#d946ef", category: "special" },
-    { id: "yellow-500", name: "Yellow", color: "#eab308", category: "special" },
-    { id: "brown-600", name: "Brown", color: "#92400e", category: "special" },
-    { id: "emerald-600", name: "Jungle", color: "#059669", category: "special" },
-    { id: "sky-400", name: "Azure", color: "#38bdf8", category: "special" }
-  ];
-
-  const [selectedColor, setSelectedColor] = useState("blue-500");
-  const [activeCategory, setActiveCategory] = useState<ThemeColor["category"]>("blue");
+  const [selectedId, setSelectedId] = useState(getDefaultColor());
+  const [customColor, setCustomColor] = useState("");
+  const [isCustom, setIsCustom] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
+  // Get the color value
+  const selectedThemeColor = isCustom
+    ? (customColor.startsWith("#") ? customColor : "#" + customColor)
+    : TAILWIND_PALETTE.find(t => t.id === selectedId)?.color || "#3b82f6";
+
   const handleSaveTheme = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!user?.id) {
       toast({
         title: "Authentication error",
@@ -84,17 +64,12 @@ const CompanyTheme = () => {
       });
       return;
     }
-    
     setIsLoading(true);
-    
     try {
-      // In a real implementation, we would save the theme to the user's company settings
-      // For now, we'll just show a success message
-      console.log("Selected theme color:", selectedColor);
-      
+      // Future: Save the theme to user's company
       toast({
         title: "Theme updated",
-        description: "Your company theme has been updated successfully.",
+        description: `Your company theme color has been updated to ${isCustom ? customColor : selectedId}.`,
       });
     } catch (error: any) {
       toast({
@@ -107,8 +82,14 @@ const CompanyTheme = () => {
     }
   };
 
-  const filteredColors = themeColors.filter(color => color.category === activeCategory);
-  const selectedThemeColor = themeColors.find(t => t.id === selectedColor)?.color;
+  const handleSwatchClick = (id: string) => {
+    setSelectedId(id);
+    setIsCustom(false);
+  };
+
+  // HEX validate (simple)
+  const isValidHex = (input: string) =>
+    /^#?([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(input);
 
   return (
     <Card>
@@ -127,42 +108,66 @@ const CompanyTheme = () => {
             <div>
               <Label>Primary Color</Label>
               <p className="text-sm text-gray-500 mb-4">
-                This color will be used as the primary accent throughout the application.
+                Select a color swatch or enter your own custom HEX color.
               </p>
-              
-              {/* Color Category Selection */}
-              <Tabs value={activeCategory} onValueChange={(value) => setActiveCategory(value as ThemeColor["category"])} className="mb-6">
-                <TabsList className="grid grid-cols-6 w-full">
-                  <TabsTrigger value="blue">Blue</TabsTrigger>
-                  <TabsTrigger value="green">Green</TabsTrigger>
-                  <TabsTrigger value="purple">Purple</TabsTrigger>
-                  <TabsTrigger value="red">Red</TabsTrigger>
-                  <TabsTrigger value="neutral">Neutral</TabsTrigger>
-                  <TabsTrigger value="special">Special</TabsTrigger>
-                </TabsList>
-              </Tabs>
-              
-              {/* Color Selection */}
-              <RadioGroup 
-                value={selectedColor} 
-                onValueChange={setSelectedColor}
-                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"
-              >
-                {filteredColors.map((theme) => (
-                  <div key={theme.id} className="flex items-center space-x-2">
-                    <RadioGroupItem value={theme.id} id={`theme-${theme.id}`} />
-                    <Label htmlFor={`theme-${theme.id}`} className="flex items-center">
-                      <span 
-                        className="w-6 h-6 rounded-full mr-2 border border-gray-200" 
-                        style={{ backgroundColor: theme.color }}
-                      ></span>
-                      {theme.name}
-                    </Label>
-                  </div>
+              {/* Palette grid */}
+              <div className="grid grid-cols-10 gap-2">
+                {TAILWIND_PALETTE.map(theme => (
+                  <button
+                    key={theme.id}
+                    type="button"
+                    aria-label={theme.id}
+                    className={`w-8 h-8 rounded-full border-2 flex items-center justify-center relative transition-colors
+                      ${isCustom ? "" : selectedId === theme.id ? "border-primary-600 ring-2 ring-primary-300" : "border-gray-200"}
+                      focus:outline-none`}
+                    style={{ backgroundColor: theme.color }}
+                    onClick={() => handleSwatchClick(theme.id)}
+                  >
+                    {selectedId === theme.id && !isCustom && (
+                      <span className="absolute inset-0 rounded-full border-2 border-white pointer-events-none"></span>
+                    )}
+                  </button>
                 ))}
-              </RadioGroup>
+              </div>
+              {/* Custom HEX input */}
+              <div className="flex items-center gap-2 mt-4">
+                <input
+                  type="text"
+                  maxLength={7}
+                  placeholder="#123456"
+                  aria-label="Custom HEX"
+                  className="w-32 px-2 py-1 border rounded text-sm"
+                  value={isCustom ? customColor : ""}
+                  onFocus={() => setIsCustom(true)}
+                  onChange={e => {
+                    setCustomColor(e.target.value.replace(/[^#A-Fa-f0-9]/g, ''));
+                    setIsCustom(true);
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant={isCustom ? "default" : "outline"}
+                  disabled={!isCustom || !isValidHex(customColor)}
+                  style={{
+                    backgroundColor: isCustom && isValidHex(customColor) ? (customColor.startsWith("#") ? customColor : `#${customColor}`) : undefined,
+                    color: isCustom && isValidHex(customColor) ? "#fff" : undefined
+                  }}
+                  className="w-8 h-8 min-w-0 p-0 rounded-full border"
+                  onClick={() => {
+                    if (isValidHex(customColor)) setIsCustom(true);
+                  }}
+                  aria-label="Custom color preview"
+                >
+                  #
+                </Button>
+                <span className="text-xs text-gray-400 ml-1">
+                  Enter custom HEX (e.g., #f87171)
+                </span>
+              </div>
+              {isCustom && !isValidHex(customColor) && customColor.length > 0 && (
+                <div className="text-red-500 text-xs mt-1">Invalid HEX format.</div>
+              )}
             </div>
-            
             <div className="mt-6 pt-6 border-t">
               <Label>Preview</Label>
               <div className="mt-2 p-4 border rounded-md">
@@ -170,8 +175,8 @@ const CompanyTheme = () => {
                   <div className="mb-4 md:mb-0">
                     <h4 className="font-medium">Button Example</h4>
                     <div className="mt-2 flex space-x-2">
-                      <Button 
-                        style={{ backgroundColor: selectedThemeColor }}
+                      <Button
+                        style={{ backgroundColor: selectedThemeColor, color: "#fff", borderColor: "#fff" }}
                       >
                         Primary Button
                       </Button>
@@ -180,12 +185,11 @@ const CompanyTheme = () => {
                       </Button>
                     </div>
                   </div>
-                  
                   <div>
                     <h4 className="font-medium">Text Example</h4>
                     <div className="mt-2">
-                      <span 
-                        className="font-medium" 
+                      <span
+                        className="font-medium"
                         style={{ color: selectedThemeColor }}
                       >
                         This text uses your primary color
@@ -201,7 +205,8 @@ const CompanyTheme = () => {
           </div>
         </CardContent>
         <CardFooter>
-          <Button type="submit" disabled={isLoading} style={{ backgroundColor: selectedThemeColor }}>
+          <Button type="submit" disabled={isLoading || (isCustom && !isValidHex(customColor))}
+            style={{ backgroundColor: selectedThemeColor, color: "#fff" }}>
             {isLoading ? "Saving..." : "Save Theme"}
           </Button>
         </CardFooter>

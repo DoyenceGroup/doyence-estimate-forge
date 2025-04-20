@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { useEffect } from "react";
 import { initializeSessionTimeout } from "@/utils/sessionTimeout";
@@ -10,6 +11,8 @@ import ProfileSetup from "@/pages/profile-setup";
 import Index from "@/pages/Index";
 import Settings from "@/pages/company/Settings";
 import { Toaster } from "@/components/ui/toaster";
+import { CSSTransition, TransitionGroup } from "react-transition-group";
+import "./route-transitions.css"; // We'll define fade transition here
 
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const { session, isLoading } = useAuth();
@@ -39,66 +42,73 @@ const UnauthenticatedOnlyRoute = ({ children }: { children: JSX.Element }) => {
   return children;
 };
 
-const AppRoutes = () => {
+// Animated routes wrapper
+const AnimatedRoutes = () => {
+  const location = useLocation();
+
+  return (
+    <TransitionGroup>
+      <CSSTransition key={location.key} classNames="route-fade" timeout={300}>
+        <Routes location={location}>
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile-setup"
+            element={
+              <ProtectedRoute>
+                <ProfileSetup />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Settings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/login"
+            element={
+              <UnauthenticatedOnlyRoute>
+                <Login />
+              </UnauthenticatedOnlyRoute>
+            }
+          />
+          <Route
+            path="/signup"
+            element={
+              <UnauthenticatedOnlyRoute>
+                <Signup />
+              </UnauthenticatedOnlyRoute>
+            }
+          />
+          <Route path="/verify" element={<Verify />} />
+          <Route path="/" element={<Index />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </CSSTransition>
+    </TransitionGroup>
+  );
+};
+
+function App() {
   useEffect(() => {
     const cleanup = initializeSessionTimeout();
     return () => cleanup();
   }, []);
 
   return (
-    <Routes>
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/profile-setup"
-        element={
-          <ProtectedRoute>
-            <ProfileSetup />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/settings"
-        element={
-          <ProtectedRoute>
-            <Settings />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/login"
-        element={
-          <UnauthenticatedOnlyRoute>
-            <Login />
-          </UnauthenticatedOnlyRoute>
-        }
-      />
-      <Route
-        path="/signup"
-        element={
-          <UnauthenticatedOnlyRoute>
-            <Signup />
-          </UnauthenticatedOnlyRoute>
-        }
-      />
-      <Route path="/verify" element={<Verify />} />
-      <Route path="/" element={<Index />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-  );
-};
-
-function App() {
-  return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRoutes />
+        <AnimatedRoutes />
         <Toaster />
       </AuthProvider>
     </BrowserRouter>

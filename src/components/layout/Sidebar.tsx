@@ -85,14 +85,17 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           <Button
             className="w-full justify-start gap-2 mb-6"
             size="lg"
+            // If this is meant to be a navigation button, use Link here as well.
+            asChild
           >
-            <Plus className="h-5 w-5" /> New Estimate
+            <Link to="/estimates">
+              <Plus className="h-5 w-5" /> New Estimate
+            </Link>
           </Button>
 
           <nav className="space-y-1">
             {navigation.map((item) => {
               const isActive = location.pathname === item.href;
-              
               return (
                 <Link
                   key={item.name}
