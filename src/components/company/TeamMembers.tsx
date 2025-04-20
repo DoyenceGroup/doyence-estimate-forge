@@ -44,6 +44,7 @@ const TeamMembers = () => {
         
         // Fetch company members with better error handling
         try {
+          // This query now leverages our new RLS policy
           const { data: memberData, error: memberError } = await supabase
             .from('company_members')
             .select('id, user_id, role')
@@ -68,7 +69,7 @@ const TeamMembers = () => {
                   .from('profiles')
                   .select('first_name, last_name, company_email, profile_photo_url')
                   .eq('id', member.user_id)
-                  .single();
+                  .maybeSingle();
                   
                 if (profileError) {
                   console.error(`Error fetching profile for user ${member.user_id}:`, profileError);

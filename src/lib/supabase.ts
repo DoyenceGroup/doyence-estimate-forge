@@ -24,10 +24,15 @@ export async function getUserCompanyId(userId: string): Promise<string | null> {
 }
 
 // Helper function to check if a user is a member of a company
-// This now uses the more efficient direct query pattern that matches our RLS policy
+// Using the direct query pattern that matches our RLS security definer function
 export async function isUserCompanyMember(companyId: string, userId: string): Promise<boolean> {
   try {
-    // Direct query that matches our RLS policy pattern
+    if (!companyId || !userId) {
+      console.warn('Missing company ID or user ID for membership check');
+      return false;
+    }
+    
+    // Direct query that aligns exactly with our security definer function
     const { data, error } = await supabase
       .from('company_members')
       .select('id')
@@ -38,6 +43,10 @@ export async function isUserCompanyMember(companyId: string, userId: string): Pr
       .maybeSingle();
     
     if (error) {
+      // Don't treat "No rows found" as an error
+      if (error.code === 'PGRST116') {
+        return false;
+      }
       console.error('Error checking company membership:', error);
       return false;
     }
