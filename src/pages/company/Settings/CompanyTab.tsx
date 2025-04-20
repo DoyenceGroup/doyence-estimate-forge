@@ -13,7 +13,7 @@ import { Building, Mail, Phone, Globe, MapPin } from "lucide-react";
 const CompanyTab = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [companyName, setCompanyName] = useState("");
-  const [companyRole, setCompanyRole] = useState(""); // Unused but kept for future-proofing
+  const [companyRole, setCompanyRole] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [website, setWebsite] = useState("");
   const [email, setEmail] = useState("");
@@ -24,8 +24,8 @@ const CompanyTab = () => {
   const { user, profile } = useAuth();
   const [companyId, setCompanyId] = useState<string | null>(null);
 
+  // Load company info, including logo, from companies table as the source of truth!
   useEffect(() => {
-    // Load company info from companies table if company_id is available
     if (profile?.company_id) {
       setCompanyId(profile.company_id);
 
@@ -37,13 +37,13 @@ const CompanyTab = () => {
         .maybeSingle()
         .then(({ data: company, error }) => {
           if (!company || error) return;
-          console.log("Loaded company data:", company);
           setCompanyName(company.name || "");
           setWebsite(company.website || "");
           setEmail(company.email || "");
           setAddress(company.address || "");
-          setLogoUrl(company.logo_url || null);
+          setLogoUrl(company.logo_url || null); // use company logo as priority
         });
+
       // Load phone from profile (not in companies)
       setPhoneNumber(profile.phone_number || "");
     }
@@ -62,19 +62,19 @@ const CompanyTab = () => {
     setIsLoading(true);
 
     try {
-      // First update the local profile's logo_url field
+      // Update the local profile's logo_url and phone_number
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
           phone_number: phoneNumber,
-          logo_url: logoUrl,
+          logo_url: logoUrl, // save logo to profile as well
           updated_at: new Date().toISOString()
         })
         .eq("id", user.id);
 
       if (profileError) throw profileError;
 
-      // Update company in companies table
+      // Update company in companies table (including logo_url)
       const { error: companyError } = await supabase
         .from('companies')
         .update({
@@ -93,8 +93,11 @@ const CompanyTab = () => {
         title: "Company updated",
         description: "Your company information has been updated successfully.",
       });
-      
-      console.log("Saved company with logo URL:", logoUrl);
+
+      // force reload after save (otherwise logo upload may not appear after save + revisit)
+      // (this workaround guarantees logo is fresh if navigating away/back)
+      setTimeout(() => window.location.reload(), 400);
+
     } catch (error: any) {
       toast({
         title: "Update failed",
@@ -106,9 +109,7 @@ const CompanyTab = () => {
     }
   };
 
-  // Update logo handler with debug logging
   const handleLogoChange = (logo: string | null) => {
-    console.log("Logo changed to:", logo);
     setLogoUrl(logo);
   };
 

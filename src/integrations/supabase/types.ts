@@ -17,6 +17,7 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
+          theme_color: string | null
           updated_at: string
           website: string | null
         }
@@ -27,6 +28,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name: string
+          theme_color?: string | null
           updated_at?: string
           website?: string | null
         }
@@ -37,6 +39,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name?: string
+          theme_color?: string | null
           updated_at?: string
           website?: string | null
         }
