@@ -54,21 +54,63 @@ const CompanyInvite = () => {
       }
       
       if (!companyId) {
-        throw new Error("No company ID found. Please set up your company first.");
+        // Check if company name exists
+        if (profile?.company_name) {
+          // Try to create a company first
+          const { data: companyData, error: companyError } = await supabase
+            .from('companies')
+            .insert({
+              name: profile.company_name,
+              // Add other company details if available
+              email: profile.company_email,
+              website: profile.website,
+              address: profile.company_address
+            })
+            .select('id')
+            .single();
+            
+          if (companyError) throw companyError;
+          
+          // Update user profile with new company ID
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update({ company_id: companyData.id })
+            .eq('id', user.id);
+            
+          if (profileError) throw profileError;
+          
+          // Use the new company ID
+          const newCompanyId = companyData.id;
+          
+          // Create invitations with the new company ID
+          const { error } = await supabase
+            .from('invitations')
+            .insert(
+              emailList.map(email => ({
+                company_id: newCompanyId,
+                email: email,
+                created_by: user.id
+              }))
+            );
+          
+          if (error) throw error;
+        } else {
+          throw new Error("No company ID found. Please set up your company first.");
+        }
+      } else {
+        // Create invitations with existing company ID
+        const { error } = await supabase
+          .from('invitations')
+          .insert(
+            emailList.map(email => ({
+              company_id: companyId,
+              email: email,
+              created_by: user.id
+            }))
+          );
+        
+        if (error) throw error;
       }
-
-      // Create invitations in the database
-      const { error } = await supabase
-        .from('invitations')
-        .insert(
-          emailList.map(email => ({
-            company_id: companyId,
-            email: email,
-            created_by: user.id
-          }))
-        );
-      
-      if (error) throw error;
       
       toast({
         title: "Invitations sent",
@@ -78,6 +120,7 @@ const CompanyInvite = () => {
       // Clear the input
       setEmails("");
     } catch (error: any) {
+      console.error("Invitation error:", error);
       toast({
         title: "Failed to send invitations",
         description: error.message || "An error occurred. Please try again.",

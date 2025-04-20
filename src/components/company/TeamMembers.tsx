@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +24,7 @@ interface TeamMember {
 interface Invitation {
   id: string;
   email: string;
-  status: 'pending' | 'accepted' | 'expired';
+  status: 'pending' | 'accepted' | 'expired' | string;
   created_at: string;
 }
 
@@ -31,35 +32,102 @@ const TeamMembers = () => {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [noCompany, setNoCompany] = useState(false);
   const { toast } = useToast();
   const { user, profile } = useAuth();
 
   const fetchTeamData = async () => {
-    if (!profile?.company_id) return;
+    if (!user?.id) {
+      setIsLoading(false);
+      return;
+    }
 
     try {
-      const { data: membersData, error: membersError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('company_id', profile.company_id);
-
-      if (membersError) throw membersError;
+      // If no company_id, check user's profile
+      if (!profile?.company_id) {
+        console.log("No company ID found in profile");
+        // Check if user has company information but no ID yet
+        if (profile?.company_name) {
+          // Try to create a company and assign it to user
+          const { data: companyData, error: companyError } = await supabase
+            .from('companies')
+            .insert({
+              name: profile.company_name,
+              email: profile.company_email,
+              website: profile.website,
+              address: profile.company_address
+            })
+            .select('id')
+            .single();
+          
+          if (companyError) {
+            console.error("Error creating company:", companyError);
+            setNoCompany(true);
+            setIsLoading(false);
+            return;
+          }
+          
+          // Update user profile with new company ID
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update({ company_id: companyData.id })
+            .eq('id', user.id);
+          
+          if (profileError) {
+            console.error("Error updating profile with company ID:", profileError);
+            setNoCompany(true);
+            setIsLoading(false);
+            return;
+          }
+          
+          // Continue with the newly created company ID
+          await fetchWithCompanyId(companyData.id);
+        } else {
+          setNoCompany(true);
+          setIsLoading(false);
+        }
+        return;
+      }
       
-      const { data: invitationsData, error: invitationsError } = await supabase
-        .from('invitations')
-        .select('*')
-        .eq('company_id', profile.company_id);
-
-      if (invitationsError) throw invitationsError;
-
-      setMembers(membersData || []);
-      setInvitations(invitationsData || []);
+      await fetchWithCompanyId(profile.company_id);
     } catch (error: any) {
+      console.error("Error fetching team data:", error);
       toast({
         title: "Error fetching team data",
         description: error.message,
         variant: "destructive",
       });
+      setIsLoading(false);
+    }
+  };
+  
+  const fetchWithCompanyId = async (companyId: string) => {
+    try {
+      // Fetch members (profiles with the same company_id)
+      const { data: membersData, error: membersError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('company_id', companyId);
+
+      if (membersError) throw membersError;
+      
+      // Fetch invitations for this company
+      const { data: invitationsData, error: invitationsError } = await supabase
+        .from('invitations')
+        .select('*')
+        .eq('company_id', companyId);
+
+      if (invitationsError) throw invitationsError;
+
+      console.log("Members data:", membersData);
+      console.log("Invitations data:", invitationsData);
+
+      setMembers(membersData || []);
+      setInvitations(invitationsData || []);
+      setNoCompany(false);
+    } catch (error) {
+      console.error("Error in fetchWithCompanyId:", error);
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -68,19 +136,31 @@ const TeamMembers = () => {
   useEffect(() => {
     fetchTeamData();
     
+    // Set up realtime subscription for invitations
     const channel = supabase
       .channel('team-changes')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'invitations' },
-        () => fetchTeamData()
+        () => {
+          console.log("Received realtime update for invitations");
+          fetchTeamData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'profiles' },
+        () => {
+          console.log("Received realtime update for profiles");
+          fetchTeamData();
+        }
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [profile?.company_id]);
+  }, [profile?.company_id, user?.id]);
   
   const handleRemoveMember = async (memberId: string) => {
     try {
@@ -131,8 +211,38 @@ const TeamMembers = () => {
   };
   
   const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+    return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase() || 'U';
   };
+
+  if (noCompany) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Team Members
+          </CardTitle>
+          <CardDescription>
+            Manage your team members and invitations
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="py-6 text-center">
+            <p className="text-gray-500 mb-4">
+              You need to set up your company information first.
+            </p>
+            <Button 
+              onClick={() => {
+                window.location.href = "/settings";
+              }}
+            >
+              Set Up Company
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -152,66 +262,72 @@ const TeamMembers = () => {
           <div className="space-y-6">
             <div>
               <h3 className="font-medium mb-2">Active Members ({members.length})</h3>
-              <div className="space-y-2">
-                {members.map(member => (
-                  <div key={member.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-                    <div className="flex items-center space-x-3">
-                      <Avatar>
-                        {member.profile_photo_url && (
-                          <AvatarImage src={member.profile_photo_url} alt={`${member.first_name} ${member.last_name}`} />
-                        )}
-                        <AvatarFallback>{getInitials(member.first_name || '', member.last_name || '')}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-medium">
-                          {member.first_name} {member.last_name}
-                          {member.id === user?.id && <span className="ml-2 text-xs text-gray-500">(You)</span>}
+              {members.length > 0 ? (
+                <div className="space-y-2">
+                  {members.map(member => (
+                    <div key={member.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                      <div className="flex items-center space-x-3">
+                        <Avatar>
+                          {member.profile_photo_url && (
+                            <AvatarImage src={member.profile_photo_url} alt={`${member.first_name} ${member.last_name}`} />
+                          )}
+                          <AvatarFallback>{getInitials(member.first_name || '', member.last_name || '')}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium">
+                            {member.first_name || ''} {member.last_name || ''}
+                            {member.id === user?.id && <span className="ml-2 text-xs text-gray-500">(You)</span>}
+                          </div>
+                          <div className="text-sm text-gray-500">{member.email}</div>
                         </div>
-                        <div className="text-sm text-gray-500">{member.email}</div>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <Badge variant="outline">{member.role || 'Member'}</Badge>
+                        
+                        {member.id !== user?.id && (
+                          <Dialog>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">...</Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent>
+                                <DialogTrigger asChild>
+                                  <DropdownMenuItem className="text-red-600">
+                                    <UserX className="h-4 w-4 mr-2" />
+                                    Remove
+                                  </DropdownMenuItem>
+                                </DialogTrigger>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                            
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Remove team member</DialogTitle>
+                                <DialogDescription>
+                                  Are you sure you want to remove this team member? They will no longer have access to your company.
+                                </DialogDescription>
+                              </DialogHeader>
+                              <DialogFooter>
+                                <Button variant="outline" onClick={() => {}}>Cancel</Button>
+                                <Button variant="destructive" onClick={() => handleRemoveMember(member.id)}>Remove</Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                        )}
                       </div>
                     </div>
-                    <div className="flex items-center space-x-3">
-                      <Badge variant="outline">{member.role || 'Member'}</Badge>
-                      
-                      {member.id !== user?.id && (
-                        <Dialog>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">...</Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                              <DialogTrigger asChild>
-                                <DropdownMenuItem className="text-red-600">
-                                  <UserX className="h-4 w-4 mr-2" />
-                                  Remove
-                                </DropdownMenuItem>
-                              </DialogTrigger>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                          
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Remove team member</DialogTitle>
-                              <DialogDescription>
-                                Are you sure you want to remove this team member? They will no longer have access to your company.
-                              </DialogDescription>
-                            </DialogHeader>
-                            <DialogFooter>
-                              <Button variant="outline" onClick={() => {}}>Cancel</Button>
-                              <Button variant="destructive" onClick={() => handleRemoveMember(member.id)}>Remove</Button>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-3 bg-gray-50 rounded-md text-center text-gray-500">
+                  No team members yet
+                </div>
+              )}
             </div>
             
-            {invitations.length > 0 && (
-              <div>
-                <h3 className="font-medium mb-2">Pending Invitations ({invitations.length})</h3>
+            <div>
+              <h3 className="font-medium mb-2">Pending Invitations ({invitations.length})</h3>
+              {invitations.length > 0 ? (
                 <div className="space-y-2">
                   {invitations.map(invitation => (
                     <div key={invitation.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
@@ -240,8 +356,12 @@ const TeamMembers = () => {
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="p-3 bg-gray-50 rounded-md text-center text-gray-500">
+                  No pending invitations
+                </div>
+              )}
+            </div>
           </div>
         )}
       </CardContent>
