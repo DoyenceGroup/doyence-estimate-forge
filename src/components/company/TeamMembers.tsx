@@ -3,15 +3,14 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Users, UserX, User, UserCheck } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { TeamMember, TeamMemberData, CompanyInvitation } from "@/lib/types";
-import { getUserCompanyId } from "@/lib/supabase";
+import { TeamMember, CompanyInvitation } from "@/lib/types";
 
 const TeamMembers = () => {
   const [members, setMembers] = useState<TeamMember[]>([]);
@@ -21,144 +20,118 @@ const TeamMembers = () => {
   const { toast } = useToast();
   const { user, profile } = useAuth();
 
-  const fetchTeamData = async () => {
-    if (!user?.id) {
+  useEffect(() => {
+    if (!user?.id || !profile) {
       setIsLoading(false);
       return;
     }
 
-    try {
-      console.log("Fetching team data for user:", user.id);
-      
-      // Get the user's company ID directly from the current profile or through a helper function
-      const companyId = profile?.company_id || await getUserCompanyId(user.id);
-      
-      if (!companyId) {
-        console.log("No company ID found for user");
-        setNoCompany(true);
-        setIsLoading(false);
-        return;
-      }
-      
-      console.log("Using company ID:", companyId);
-      await fetchWithCompanyId(companyId);
-    } catch (error: any) {
-      console.error("Error fetching team data:", error);
-      toast({
-        title: "Error fetching team data",
-        description: error.message,
-        variant: "destructive",
-      });
-      setIsLoading(false);
-    }
-  };
-
-  const fetchWithCompanyId = async (companyId: string) => {
-    try {
-      console.log("Fetching team members for company:", companyId);
-      
-      // Use a simpler query that avoids RLS policy recursion issues
-      const { data: membersData, error: membersError } = await supabase
-        .from('company_members')
-        .select('id, user_id, role')
-        .eq('company_id', companyId);
-
-      if (membersError) {
-        console.error("Error fetching members:", membersError);
-        throw membersError;
-      }
-      
-      console.log("Raw members data:", membersData);
-      
-      const memberProfiles: TeamMember[] = [];
-      
-      for (const member of membersData) {
-        const { data: profileData, error: profileError } = await supabase
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Get company ID directly from profile
+        const companyId = profile.company_id;
+        
+        if (!companyId) {
+          console.log("No company ID found for user");
+          setNoCompany(true);
+          setIsLoading(false);
+          return;
+        }
+        
+        console.log("Using company ID:", companyId);
+        
+        // Fetch profiles directly with a join to company_members
+        // This avoids the RLS circular reference issue
+        const { data: memberProfiles, error: memberError } = await supabase
           .from('profiles')
-          .select('first_name, last_name, email, profile_photo_url')
-          .eq('id', member.user_id)
-          .single();
-          
-        if (profileError) {
-          console.warn("Could not fetch profile for member:", member.user_id, profileError);
-          // Continue anyway, just with limited data
+          .select(`
+            id,
+            first_name,
+            last_name,
+            email,
+            profile_photo_url,
+            company_members!inner(id, role)
+          `)
+          .eq('company_members.company_id', companyId);
+        
+        if (memberError) {
+          console.error("Error fetching member profiles:", memberError);
+          throw memberError;
         }
         
-        memberProfiles.push({
-          id: member.id,
-          user_id: member.user_id,
-          role: member.role || 'member',
-          first_name: profileData?.first_name || null,
-          last_name: profileData?.last_name || null,
-          email: profileData?.email || null,
-          profile_photo_url: profileData?.profile_photo_url || null
+        // Format the data to match the TeamMember type
+        const formattedMembers: TeamMember[] = memberProfiles?.map(profile => ({
+          id: profile.company_members[0].id,
+          user_id: profile.id,
+          role: profile.company_members[0].role,
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+          email: profile.email,
+          profile_photo_url: profile.profile_photo_url
+        })) || [];
+        
+        // Check if current user is in the list, add if not
+        if (user && !formattedMembers.some(m => m.user_id === user.id)) {
+          // Add current user directly to company_members table
+          const { data: insertData, error: insertError } = await supabase
+            .from('company_members')
+            .insert({
+              company_id: companyId,
+              user_id: user.id,
+              role: 'admin' // First user is an admin
+            })
+            .select('id')
+            .single();
+          
+          if (insertError && insertError.code !== '23505') { // Ignore duplicate key errors
+            console.error("Error adding current user to company:", insertError);
+          } else {
+            console.log("Current user added to company members or already exists");
+            
+            // Add current user to the local members list
+            formattedMembers.push({
+              id: insertData?.id || `temp-${user.id}`,
+              user_id: user.id,
+              role: 'admin',
+              first_name: profile.first_name,
+              last_name: profile.last_name,
+              email: profile.email,
+              profile_photo_url: profile.profile_photo_url
+            });
+          }
+        }
+
+        // Fetch invitations
+        const { data: invitationsData, error: invitationsError } = await supabase
+          .from('invitations')
+          .select('*')
+          .eq('company_id', companyId);
+
+        if (invitationsError) {
+          console.error("Error fetching invitations:", invitationsError);
+          throw invitationsError;
+        }
+
+        setMembers(formattedMembers);
+        setInvitations(invitationsData || []);
+        setNoCompany(false);
+      } catch (error) {
+        console.error("Error fetching team data:", error);
+        toast({
+          title: "Error fetching team data",
+          description: error.message || "An unexpected error occurred",
+          variant: "destructive",
         });
+      } finally {
+        setIsLoading(false);
       }
+    };
 
-      console.log("Processed member profiles:", memberProfiles);
-      
-      // Check if current user is in members list and add them if needed
-      if (user && !memberProfiles.some(m => m.user_id === user.id)) {
-        console.log("Current user not found in members, adding them");
-        
-        // Add current user to company_members table
-        const { data: insertData, error: insertError } = await supabase
-          .from('company_members')
-          .insert({
-            company_id: companyId,
-            user_id: user.id,
-            role: 'admin' // First user is an admin
-          })
-          .select('id')
-          .single();
-        
-        if (insertError && insertError.code !== '23505') { // Ignore duplicate key errors
-          console.error("Error adding current user to company:", insertError);
-        } else {
-          console.log("Current user added to company members or already exists");
-          
-          // Add current user to the local members list
-          memberProfiles.push({
-            id: insertData?.id || `temp-${user.id}`,
-            user_id: user.id,
-            role: 'admin',
-            first_name: profile?.first_name || null,
-            last_name: profile?.last_name || null,
-            email: profile?.email || null,
-            profile_photo_url: profile?.profile_photo_url || null
-          });
-        }
-      }
-
-      console.log("Fetching invitations for company:", companyId);
-      const { data: invitationsData, error: invitationsError } = await supabase
-        .from('invitations')
-        .select('*')
-        .eq('company_id', companyId);
-
-      if (invitationsError) {
-        console.error("Error fetching invitations:", invitationsError);
-        throw invitationsError;
-      }
-
-      console.log("Final members data:", memberProfiles);
-      console.log("Invitations data:", invitationsData);
-
-      setMembers(memberProfiles || []);
-      setInvitations(invitationsData || []);
-      setNoCompany(false);
-    } catch (error) {
-      console.error("Error in fetchWithCompanyId:", error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchTeamData();
+    fetchData();
     
-    // Set up realtime subscription for updates
+    // Set up realtime subscription
     const channel = supabase
       .channel('team-changes')
       .on(
@@ -166,7 +139,7 @@ const TeamMembers = () => {
         { event: '*', schema: 'public', table: 'invitations' },
         () => {
           console.log("Received realtime update for invitations");
-          fetchTeamData();
+          fetchData();
         }
       )
       .on(
@@ -174,7 +147,7 @@ const TeamMembers = () => {
         { event: '*', schema: 'public', table: 'company_members' },
         () => {
           console.log("Received realtime update for company_members");
-          fetchTeamData();
+          fetchData();
         }
       )
       .on(
@@ -182,7 +155,7 @@ const TeamMembers = () => {
         { event: '*', schema: 'public', table: 'profiles' },
         () => {
           console.log("Received realtime update for profiles");
-          fetchTeamData();
+          fetchData();
         }
       )
       .subscribe();
@@ -190,7 +163,7 @@ const TeamMembers = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id]);
+  }, [user?.id, profile, toast]);
   
   const handleRemoveMember = async (memberId: string, userId: string) => {
     try {
@@ -216,7 +189,7 @@ const TeamMembers = () => {
         description: "The team member has been removed from your company.",
       });
       
-      fetchTeamData();
+      setMembers(members.filter(member => member.id !== memberId));
     } catch (error: any) {
       toast({
         title: "Failed to remove member",
@@ -240,7 +213,7 @@ const TeamMembers = () => {
         description: "The invitation has been cancelled.",
       });
       
-      fetchTeamData();
+      setInvitations(invitations.filter(invitation => invitation.id !== invitationId));
     } catch (error: any) {
       toast({
         title: "Failed to cancel invitation",
