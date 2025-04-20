@@ -1,10 +1,9 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserPlus, Mail } from "lucide-react";
@@ -44,72 +43,62 @@ const CompanyInvite = () => {
     setIsLoading(true);
     
     try {
-      // For each email, create an invitation in the database
-      const companyId = profile?.company_id;
-      
-      // Validate emails
-      const invalidEmails = emailList.filter(email => !validateEmail(email));
-      if (invalidEmails.length > 0) {
-        throw new Error(`Invalid email format: ${invalidEmails.join(", ")}`);
-      }
-      
-      if (!companyId) {
-        // Check if company name exists
-        if (profile?.company_name) {
-          // Try to create a company first
-          const { data: companyData, error: companyError } = await supabase
-            .from('companies')
-            .insert({
-              name: profile.company_name,
-              // Add other company details if available
-              email: profile.company_email,
-              website: profile.website,
-              address: profile.company_address
-            })
-            .select('id')
-            .single();
-            
-          if (companyError) throw companyError;
-          
-          // Update user profile with new company ID
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .update({ company_id: companyData.id })
-            .eq('id', user.id);
-            
-          if (profileError) throw profileError;
-          
-          // Use the new company ID
-          const newCompanyId = companyData.id;
-          
-          // Create invitations with the new company ID
-          const { error } = await supabase
-            .from('invitations')
-            .insert(
-              emailList.map(email => ({
-                company_id: newCompanyId,
-                email: email,
-                created_by: user.id
-              }))
-            );
-          
-          if (error) throw error;
-        } else {
-          throw new Error("No company ID found. Please set up your company first.");
+      // First, ensure we have a company_id
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('company_id, company_name')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) throw profileError;
+
+      if (!userProfile.company_id && userProfile.company_name) {
+        // Trigger company creation by updating the profile
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ updated_at: new Date().toISOString() })
+          .eq('id', user.id);
+
+        if (updateError) throw updateError;
+
+        // Fetch the updated profile to get the new company_id
+        const { data: updatedProfile, error: updatedProfileError } = await supabase
+          .from('profiles')
+          .select('company_id')
+          .eq('id', user.id)
+          .single();
+
+        if (updatedProfileError || !updatedProfile.company_id) {
+          throw new Error("Failed to create company. Please set up your company information first.");
         }
-      } else {
-        // Create invitations with existing company ID
-        const { error } = await supabase
+
+        // Create invitations with the new company_id
+        const { error: inviteError } = await supabase
           .from('invitations')
           .insert(
             emailList.map(email => ({
-              company_id: companyId,
+              company_id: updatedProfile.company_id,
               email: email,
               created_by: user.id
             }))
           );
-        
-        if (error) throw error;
+
+        if (inviteError) throw inviteError;
+      } else if (!userProfile.company_id) {
+        throw new Error("No company found. Please set up your company information first.");
+      } else {
+        // Create invitations with existing company_id
+        const { error: inviteError } = await supabase
+          .from('invitations')
+          .insert(
+            emailList.map(email => ({
+              company_id: userProfile.company_id,
+              email: email,
+              created_by: user.id
+            }))
+          );
+
+        if (inviteError) throw inviteError;
       }
       
       toast({
@@ -117,7 +106,6 @@ const CompanyInvite = () => {
         description: `Sent invitations to ${emailList.length} email(s).`,
       });
       
-      // Clear the input
       setEmails("");
     } catch (error: any) {
       console.error("Invitation error:", error);
@@ -130,7 +118,7 @@ const CompanyInvite = () => {
       setIsLoading(false);
     }
   };
-  
+
   // Simple email validation
   const validateEmail = (email: string) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);

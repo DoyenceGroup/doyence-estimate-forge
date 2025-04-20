@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Users, UserX, User, UserCheck } from "lucide-react";
@@ -43,45 +42,49 @@ const TeamMembers = () => {
     }
 
     try {
-      // If no company_id, check user's profile
-      if (!profile?.company_id) {
-        console.log("No company ID found in profile");
-        // Check if user has company information but no ID yet
-        if (profile?.company_name) {
-          // Try to create a company and assign it to user
-          const { data: companyData, error: companyError } = await supabase
-            .from('companies')
-            .insert({
-              name: profile.company_name,
-              email: profile.company_email,
-              website: profile.website,
-              address: profile.company_address
-            })
-            .select('id')
-            .single();
-          
-          if (companyError) {
-            console.error("Error creating company:", companyError);
-            setNoCompany(true);
-            setIsLoading(false);
-            return;
-          }
-          
-          // Update user profile with new company ID
-          const { error: profileError } = await supabase
+      // First check if the user has a company_id
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('company_id, company_name')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) {
+        console.error("Error fetching profile:", profileError);
+        setNoCompany(true);
+        setIsLoading(false);
+        return;
+      }
+
+      if (!userProfile.company_id) {
+        // If user has company name but no company_id, trigger an update to create the company
+        if (userProfile.company_name) {
+          const { error: updateError } = await supabase
             .from('profiles')
-            .update({ company_id: companyData.id })
+            .update({ updated_at: new Date().toISOString() })
             .eq('id', user.id);
-          
-          if (profileError) {
-            console.error("Error updating profile with company ID:", profileError);
+
+          if (updateError) {
+            console.error("Error updating profile:", updateError);
             setNoCompany(true);
             setIsLoading(false);
             return;
           }
-          
-          // Continue with the newly created company ID
-          await fetchWithCompanyId(companyData.id);
+
+          // Fetch the updated profile to get the new company_id
+          const { data: updatedProfile, error: updatedProfileError } = await supabase
+            .from('profiles')
+            .select('company_id')
+            .eq('id', user.id)
+            .single();
+
+          if (updatedProfileError || !updatedProfile.company_id) {
+            setNoCompany(true);
+            setIsLoading(false);
+            return;
+          }
+
+          await fetchWithCompanyId(updatedProfile.company_id);
         } else {
           setNoCompany(true);
           setIsLoading(false);
@@ -89,7 +92,7 @@ const TeamMembers = () => {
         return;
       }
       
-      await fetchWithCompanyId(profile.company_id);
+      await fetchWithCompanyId(userProfile.company_id);
     } catch (error: any) {
       console.error("Error fetching team data:", error);
       toast({
@@ -100,7 +103,7 @@ const TeamMembers = () => {
       setIsLoading(false);
     }
   };
-  
+
   const fetchWithCompanyId = async (companyId: string) => {
     try {
       // Fetch members (profiles with the same company_id)
@@ -132,7 +135,7 @@ const TeamMembers = () => {
       setIsLoading(false);
     }
   };
-  
+
   useEffect(() => {
     fetchTeamData();
     
@@ -229,14 +232,15 @@ const TeamMembers = () => {
         <CardContent>
           <div className="py-6 text-center">
             <p className="text-gray-500 mb-4">
-              You need to set up your company information first.
+              Please complete your company information first.
             </p>
             <Button 
               onClick={() => {
                 window.location.href = "/settings";
               }}
+              variant="default"
             >
-              Set Up Company
+              Complete Company Setup
             </Button>
           </div>
         </CardContent>
