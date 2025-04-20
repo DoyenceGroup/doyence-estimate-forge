@@ -4,15 +4,19 @@ import { supabase } from '@/integrations/supabase/client';
 // Helper function to get the current user's company ID
 export async function getUserCompanyId(userId: string): Promise<string | null> {
   try {
-    // Call our improved database function
-    const { data, error } = await supabase.rpc('get_user_company_id', { user_uuid: userId });
+    // Get the user's profile to determine their company ID
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('company_id')
+      .eq('id', userId)
+      .single();
     
     if (error) {
       console.error('Error getting user company ID:', error);
       return null;
     }
     
-    return data || null;
+    return data?.company_id || null;
   } catch (error) {
     console.error('Error getting user company ID:', error);
     return null;
@@ -20,13 +24,18 @@ export async function getUserCompanyId(userId: string): Promise<string | null> {
 }
 
 // Helper function to check if a user is a member of a company
+// This now uses the more efficient direct query pattern that matches our RLS policy
 export async function isUserCompanyMember(companyId: string, userId: string): Promise<boolean> {
   try {
-    // Call our improved database function
-    const { data, error } = await supabase.rpc('is_company_member', { 
-      company_uuid: companyId, 
-      user_uuid: userId 
-    });
+    // Direct query that matches our RLS policy pattern
+    const { data, error } = await supabase
+      .from('company_members')
+      .select('id')
+      .match({ 
+        company_id: companyId, 
+        user_id: userId 
+      })
+      .maybeSingle();
     
     if (error) {
       console.error('Error checking company membership:', error);
