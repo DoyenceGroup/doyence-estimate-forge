@@ -212,6 +212,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_user_company_access: {
+        Args: { company_id: string }
+        Returns: boolean
+      }
       generate_invitation_token: {
         Args: Record<PropertyKey, never>
         Returns: string
