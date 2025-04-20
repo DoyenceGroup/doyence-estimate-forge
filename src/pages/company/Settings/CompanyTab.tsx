@@ -22,25 +22,38 @@ const CompanyTab = () => {
 
   const { toast } = useToast();
   const { user, profile } = useAuth();
+  const [companyId, setCompanyId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (profile) {
-      setCompanyName(profile.company_name || "");
-      setCompanyRole(profile.company_role || "");
+    // Load company info from companies table if company_id is available
+    if (profile?.company_id) {
+      setCompanyId(profile.company_id);
+
+      // Fetch company details from companies table
+      supabase
+        .from("companies")
+        .select("*")
+        .eq("id", profile.company_id)
+        .maybeSingle()
+        .then(({ data: company, error }) => {
+          if (!company || error) return;
+          setCompanyName(company.name || "");
+          setWebsite(company.website || "");
+          setEmail(company.email || "");
+          setAddress(company.address || "");
+          setLogoUrl(company.logo_url || null);
+        });
+      // Load phone from profile (not in companies)
       setPhoneNumber(profile.phone_number || "");
-      setWebsite(profile.website || "");
-      setEmail(profile.company_email || "");
-      setAddress(profile.company_address || "");
-      setLogoUrl(profile.logo_url || null);
     }
   }, [profile]);
 
   const handleSaveCompany = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user?.id) {
+    if (!user?.id || !companyId) {
       toast({
-        title: "Authentication error",
-        description: "You must be logged in to update company details.",
+        title: "Error",
+        description: "Missing user or company.",
         variant: "destructive",
       });
       return;
@@ -48,19 +61,31 @@ const CompanyTab = () => {
     setIsLoading(true);
 
     try {
-      const { error } = await supabase
+      // Update company in companies table
+      const { error: companyError } = await supabase
+        .from('companies')
+        .update({
+          name: companyName,
+          website: website,
+          email: email,
+          address: address,
+          logo_url: logoUrl,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", companyId);
+
+      if (companyError) throw companyError;
+
+      // Update phone in user profile
+      const { error: profileError } = await supabase
         .from('profiles')
         .update({
-          company_name: companyName,
-          website: website,
-          company_email: email,
-          company_address: address,
-          logo_url: logoUrl,
+          phone_number: phoneNumber,
           updated_at: new Date().toISOString()
         })
         .eq("id", user.id);
 
-      if (error) throw error;
+      if (profileError) throw profileError;
 
       toast({
         title: "Company updated",
