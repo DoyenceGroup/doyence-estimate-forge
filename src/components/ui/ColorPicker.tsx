@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from "react";
 
 interface ColorPickerProps {
@@ -32,14 +31,12 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ value, onChange }) => {
   const [sat, setSat] = useState(100);
   const [light, setLight] = useState(50);
   
-  // Update on value change
   useEffect(() => {
     // Try to parse input hex value
     // We'll just ignore if not valid hex
   }, [value]);
   
   useEffect(() => {
-    // Draw hue strip
     const ctx = hStrip.current?.getContext("2d");
     if (!ctx) return;
     for (let i = 0; i < 150; i++) {
@@ -49,7 +46,6 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ value, onChange }) => {
   }, [hue]);
 
   useEffect(() => {
-    // Draw the color square based on hue
     const ctx = sBox.current?.getContext("2d");
     if (!ctx) return;
     for(let y = 0; y < 150; y++) {
@@ -66,7 +62,6 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ value, onChange }) => {
     const y = e.nativeEvent.offsetY;
     const newHue = Math.round((y/150)*360);
     setHue(newHue);
-    // Optionally pick sat/lgt pointer
     handleSatBoxPick({ nativeEvent: { offsetX: sat/100*150, offsetY: (100-light)/100*150 } } as any)
   }
 
@@ -97,10 +92,13 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ value, onChange }) => {
             position: "absolute",
             left: `${(sat/100)*150-8}px`,
             top: `${(100-light)/100*150-8}px`,
-            width:16, height:16, borderRadius: "50%",
-            border: "2px solid #fff", boxShadow: "0 0 3px 1px #0005"
+            width: 16, 
+            height: 16, 
+            borderRadius: "50%",
+            border: "2px solid #fff", 
+            boxShadow: "0 0 3px 1px #0005",
+            pointerEvents: "none"
           }}
-          pointerEvents="none"
         />
       </div>
       <div style={{position:"relative"}}>
@@ -116,8 +114,11 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ value, onChange }) => {
             position: "absolute",
             left: 0,
             top: `${(hue/360)*150-8}px`,
-            width:34, height:16, borderRadius:8,
-            border:"2px solid #fff", pointerEvents: "none"
+            width: 34, 
+            height: 16, 
+            borderRadius: 8,
+            border: "2px solid #fff", 
+            pointerEvents: "none"
           }}
         />
       </div>
