@@ -221,7 +221,9 @@ export type Database = {
         Returns: string
       }
       is_company_member: {
-        Args: { company_id: string }
+        Args:
+          | { company_id: string }
+          | { company_uuid: string; user_uuid: string }
         Returns: boolean
       }
       user_is_company_member: {

@@ -42,8 +42,8 @@ const TeamMembers = () => {
         
         console.log("Using company ID:", companyId);
         
+        // Fetch company members with better error handling
         try {
-          // First, get company members
           const { data: memberData, error: memberError } = await supabase
             .from('company_members')
             .select('id, user_id, role')
@@ -54,7 +54,7 @@ const TeamMembers = () => {
             throw memberError;
           }
           
-          if (!memberData) {
+          if (!memberData || memberData.length === 0) {
             console.log("No member data returned");
             setMembers([]);
           } else {
@@ -66,7 +66,7 @@ const TeamMembers = () => {
                 // Get profile data for this user_id
                 const { data: profileData, error: profileError } = await supabase
                   .from('profiles')
-                  .select('first_name, last_name, phone_number, profile_photo_url, company_email')
+                  .select('first_name, last_name, company_email, profile_photo_url')
                   .eq('id', member.user_id)
                   .single();
                   
@@ -117,11 +117,12 @@ const TeamMembers = () => {
             description: "Unable to load team members. Please try again later.",
             variant: "destructive",
           });
+          setMembers([]);
         }
         
+        // Check if current user is in the list, add if not
         try {
-          // Check if current user is in the list, add if not
-          if (user && !members.some(m => m.user_id === user.id)) {
+          if (user && members.length > 0 && !members.some(m => m.user_id === user.id)) {
             try {
               // Add current user directly to company_members table
               const { data: insertData, error: insertError } = await supabase
@@ -134,26 +135,27 @@ const TeamMembers = () => {
                 .select('id')
                 .single();
               
-              if (insertError && insertError.code !== '23505') { // Ignore duplicate key errors
-                console.error("Error adding current user to company:", insertError);
-              } else {
-                console.log("Current user added to company members or already exists");
-                
-                // Add current user to the local members list if not already there
-                if (!members.some(m => m.user_id === user.id)) {
-                  setMembers(prevMembers => [
-                    ...prevMembers,
-                    {
-                      id: insertData?.id || `temp-${user.id}`,
-                      user_id: user.id,
-                      role: 'admin',
-                      first_name: profile.first_name,
-                      last_name: profile.last_name,
-                      email: profile.email,
-                      profile_photo_url: profile.profile_photo_url
-                    }
-                  ]);
+              if (insertError) {
+                // Only log actual errors, not duplicate key errors
+                if (insertError.code !== '23505') { 
+                  console.error("Error adding current user to company:", insertError);
                 }
+              } else {
+                console.log("Current user added to company members");
+                
+                // Add current user to the local members list
+                setMembers(prevMembers => [
+                  ...prevMembers,
+                  {
+                    id: insertData?.id || `temp-${user.id}`,
+                    user_id: user.id,
+                    role: 'admin',
+                    first_name: profile.first_name,
+                    last_name: profile.last_name,
+                    email: profile.company_email,
+                    profile_photo_url: profile.profile_photo_url
+                  }
+                ]);
               }
             } catch (insertMemberError) {
               console.error("Error inserting member:", insertMemberError);
@@ -163,8 +165,8 @@ const TeamMembers = () => {
           console.error("Error in current member check:", memberCheckError);
         }
 
+        // Fetch invitations with better error handling
         try {
-          // Fetch invitations
           const { data: invitationsData, error: invitationsError } = await supabase
             .from('invitations')
             .select('*')
