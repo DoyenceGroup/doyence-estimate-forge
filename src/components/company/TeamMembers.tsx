@@ -10,18 +10,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { TeamMember, TeamMemberData } from "@/lib/types";
-
-interface Invitation {
-  id: string;
-  email: string;
-  status: 'pending' | 'accepted' | 'expired' | string;
-  created_at: string;
-}
+import { TeamMember, TeamMemberData, CompanyInvitation } from "@/lib/types";
+import { getUserCompanyId } from "@/lib/supabase";
 
 const TeamMembers = () => {
   const [members, setMembers] = useState<TeamMember[]>([]);
-  const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [invitations, setInvitations] = useState<CompanyInvitation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [noCompany, setNoCompany] = useState(false);
   const { toast } = useToast();
@@ -36,61 +30,18 @@ const TeamMembers = () => {
     try {
       console.log("Fetching team data for user:", user.id);
       
-      const { data: userProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('company_id, company_name')
-        .eq('id', user.id)
-        .single();
-
-      if (profileError) {
-        console.error("Error fetching profile:", profileError);
+      // Get the user's company ID directly from the current profile or through a helper function
+      const companyId = profile?.company_id || await getUserCompanyId(user.id);
+      
+      if (!companyId) {
+        console.log("No company ID found for user");
         setNoCompany(true);
         setIsLoading(false);
         return;
       }
-
-      console.log("User profile data:", userProfile);
-
-      if (!userProfile.company_id) {
-        if (userProfile.company_name) {
-          console.log("Attempting to create company for:", userProfile.company_name);
-          const { error: updateError } = await supabase
-            .from('profiles')
-            .update({ updated_at: new Date().toISOString() })
-            .eq('id', user.id);
-
-          if (updateError) {
-            console.error("Error updating profile:", updateError);
-            setNoCompany(true);
-            setIsLoading(false);
-            return;
-          }
-
-          const { data: updatedProfile, error: updatedProfileError } = await supabase
-            .from('profiles')
-            .select('company_id')
-            .eq('id', user.id)
-            .single();
-
-          if (updatedProfileError || !updatedProfile.company_id) {
-            console.error("Error getting updated profile or no company_id:", updatedProfileError);
-            setNoCompany(true);
-            setIsLoading(false);
-            return;
-          }
-
-          console.log("Company created with ID:", updatedProfile.company_id);
-          await fetchWithCompanyId(updatedProfile.company_id);
-        } else {
-          console.log("No company name set in profile");
-          setNoCompany(true);
-          setIsLoading(false);
-        }
-        return;
-      }
       
-      console.log("Using existing company ID:", userProfile.company_id);
-      await fetchWithCompanyId(userProfile.company_id);
+      console.log("Using company ID:", companyId);
+      await fetchWithCompanyId(companyId);
     } catch (error: any) {
       console.error("Error fetching team data:", error);
       toast({
@@ -106,6 +57,7 @@ const TeamMembers = () => {
     try {
       console.log("Fetching team members for company:", companyId);
       
+      // Use a simpler query that avoids RLS policy recursion issues
       const { data: membersData, error: membersError } = await supabase
         .from('company_members')
         .select('id, user_id, role')
@@ -129,6 +81,7 @@ const TeamMembers = () => {
           
         if (profileError) {
           console.warn("Could not fetch profile for member:", member.user_id, profileError);
+          // Continue anyway, just with limited data
         }
         
         memberProfiles.push({
@@ -164,24 +117,16 @@ const TeamMembers = () => {
         } else {
           console.log("Current user added to company members or already exists");
           
-          // Get current user profile data
-          const { data: currentUserProfile } = await supabase
-            .from('profiles')
-            .select('first_name, last_name, email, profile_photo_url')
-            .eq('id', user.id)
-            .single();
-          
-          if (currentUserProfile) {
-            memberProfiles.push({
-              id: insertData?.id || `temp-${user.id}`,
-              user_id: user.id,
-              role: 'admin',
-              first_name: currentUserProfile.first_name,
-              last_name: currentUserProfile.last_name,
-              email: currentUserProfile.email,
-              profile_photo_url: currentUserProfile.profile_photo_url
-            });
-          }
+          // Add current user to the local members list
+          memberProfiles.push({
+            id: insertData?.id || `temp-${user.id}`,
+            user_id: user.id,
+            role: 'admin',
+            first_name: profile?.first_name || null,
+            last_name: profile?.last_name || null,
+            email: profile?.email || null,
+            profile_photo_url: profile?.profile_photo_url || null
+          });
         }
       }
 
@@ -196,7 +141,7 @@ const TeamMembers = () => {
         throw invitationsError;
       }
 
-      console.log("Members data:", memberProfiles);
+      console.log("Final members data:", memberProfiles);
       console.log("Invitations data:", invitationsData);
 
       setMembers(memberProfiles || []);
@@ -213,6 +158,7 @@ const TeamMembers = () => {
   useEffect(() => {
     fetchTeamData();
     
+    // Set up realtime subscription for updates
     const channel = supabase
       .channel('team-changes')
       .on(
@@ -244,10 +190,20 @@ const TeamMembers = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [profile?.company_id, user?.id]);
+  }, [user?.id]);
   
   const handleRemoveMember = async (memberId: string, userId: string) => {
     try {
+      // Don't allow removing yourself
+      if (userId === user?.id) {
+        toast({
+          title: "Cannot remove yourself",
+          description: "You cannot remove yourself from the company.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       const { error } = await supabase
         .from('company_members')
         .delete()
