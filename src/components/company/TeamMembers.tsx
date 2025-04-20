@@ -19,6 +19,18 @@ interface Invitation {
   created_at: string;
 }
 
+interface MemberDataResponse {
+  id: string;
+  user_id: string;
+  role: string;
+  profiles: {
+    first_name: string | null;
+    last_name: string | null;
+    email: string | null;
+    profile_photo_url: string | null;
+  } | null;
+}
+
 const TeamMembers = () => {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
@@ -131,10 +143,16 @@ const TeamMembers = () => {
       console.log("Raw members data:", membersData);
       
       // Transform the data into the expected format
-      const formattedMembers: TeamMember[] = membersData.map(member => {
+      const formattedMembers: TeamMember[] = membersData.map((member: MemberDataResponse) => {
         console.log("Processing member:", member);
-        // Check if profiles exists and has data
-        const profileData = member.profiles || {};
+        
+        // Handle when profiles is null or empty by providing default values
+        const profileData = member.profiles || {
+          first_name: null,
+          last_name: null,
+          email: null,
+          profile_photo_url: null
+        };
         
         return {
           id: member.id,
