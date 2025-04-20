@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes in milliseconds
@@ -13,7 +12,7 @@ const resetTimer = () => {
   if (isWindowFocused) {
     clearTimeout(inactivityTimer);
     lastActivity = Date.now();
-    
+
     inactivityTimer = setTimeout(async () => {
       const timeSinceLastActivity = Date.now() - lastActivity;
       if (timeSinceLastActivity >= INACTIVITY_TIMEOUT) {
@@ -23,30 +22,34 @@ const resetTimer = () => {
   }
 };
 
+// Named handlers for proper add/remove
+function onFocus() {
+  isWindowFocused = true;
+  // Don't reset the timer here - this was causing the reload when switching windows
+}
+
+function onBlur() {
+  isWindowFocused = false;
+}
+
 export const initializeSessionTimeout = () => {
   // Track window focus/blur events
-  window.addEventListener('focus', () => {
-    isWindowFocused = true;
-    // Don't reset the timer here - this was causing the reload when switching windows
-  });
-  
-  window.addEventListener('blur', () => {
-    isWindowFocused = false;
-  });
-  
+  window.addEventListener('focus', onFocus);
+  window.addEventListener('blur', onBlur);
+
   // Reset timer on user activity, but only when the window is in focus
   ['mousedown', 'keydown', 'touchstart', 'scroll'].forEach(event => {
     window.addEventListener(event, resetTimer);
   });
-  
+
   resetTimer();
-  
+
   return () => {
     ['mousedown', 'keydown', 'touchstart', 'scroll'].forEach(event => {
       window.removeEventListener(event, resetTimer);
     });
-    window.removeEventListener('focus', () => { isWindowFocused = true; });
-    window.removeEventListener('blur', () => { isWindowFocused = false; });
+    window.removeEventListener('focus', onFocus);
+    window.removeEventListener('blur', onBlur);
     clearTimeout(inactivityTimer);
   };
 };
