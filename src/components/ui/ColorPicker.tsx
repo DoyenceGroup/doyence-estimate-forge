@@ -159,7 +159,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ value, onChange }) => {
   // For pointer feedback, dot follows pointer during drag, cursor crosshair
 
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-2" style={{ width: 'fit-content' }}>
       <div style={{ position: "relative" }}>
         <canvas
           ref={sBox}

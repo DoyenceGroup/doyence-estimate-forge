@@ -27,7 +27,7 @@ export const initializeSessionTimeout = () => {
   // Track window focus/blur events
   window.addEventListener('focus', () => {
     isWindowFocused = true;
-    resetTimer(); // Reset timer when window gets focus
+    // Don't reset the timer here - this was causing the reload when switching windows
   });
   
   window.addEventListener('blur', () => {
@@ -45,7 +45,7 @@ export const initializeSessionTimeout = () => {
     ['mousedown', 'keydown', 'touchstart', 'scroll'].forEach(event => {
       window.removeEventListener(event, resetTimer);
     });
-    window.removeEventListener('focus', resetTimer);
+    window.removeEventListener('focus', () => { isWindowFocused = true; });
     window.removeEventListener('blur', () => { isWindowFocused = false; });
     clearTimeout(inactivityTimer);
   };
