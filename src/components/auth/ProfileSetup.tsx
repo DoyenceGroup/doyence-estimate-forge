@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ const ProfileSetupForm = () => {
   const [companyRole, setCompanyRole] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [website, setWebsite] = useState("");
+  const [address, setAddress] = useState(""); // Added missing address state
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -47,6 +49,9 @@ const ProfileSetupForm = () => {
       let companyId = null;
       
       if (createNewCompany) {
+        // Get the user's email from session
+        const email = user.email;
+        
         const { data: company, error: companyError } = await supabase
           .from('companies')
           .insert({
@@ -158,6 +163,19 @@ const ProfileSetupForm = () => {
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
                   required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="address" className="flex items-center gap-1">
+                  <Building className="h-4 w-4" />
+                  Company Address
+                </Label>
+                <Input
+                  id="address"
+                  placeholder="e.g. 123 Main St, City, State"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
                 />
               </div>
               
