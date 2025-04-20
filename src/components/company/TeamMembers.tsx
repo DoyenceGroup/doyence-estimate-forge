@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -107,11 +108,7 @@ const TeamMembers = () => {
       
       const { data: membersData, error: membersError } = await supabase
         .from('company_members')
-        .select(`
-          id,
-          user_id,
-          role
-        `)
+        .select('id, user_id, role')
         .eq('company_id', companyId);
 
       if (membersError) {
@@ -147,43 +144,44 @@ const TeamMembers = () => {
 
       console.log("Processed member profiles:", memberProfiles);
       
+      // Check if current user is in members list and add them if needed
       if (user && !memberProfiles.some(m => m.user_id === user.id)) {
-        console.log("Current user not found in members, may need to add them");
+        console.log("Current user not found in members, adding them");
         
-        if (companyId) {
-          console.log("Adding current user to company members");
-          await supabase
-            .from('company_members')
-            .insert({
-              company_id: companyId,
+        // Add current user to company_members table
+        const { data: insertData, error: insertError } = await supabase
+          .from('company_members')
+          .insert({
+            company_id: companyId,
+            user_id: user.id,
+            role: 'admin' // First user is an admin
+          })
+          .select('id')
+          .single();
+        
+        if (insertError && insertError.code !== '23505') { // Ignore duplicate key errors
+          console.error("Error adding current user to company:", insertError);
+        } else {
+          console.log("Current user added to company members or already exists");
+          
+          // Get current user profile data
+          const { data: currentUserProfile } = await supabase
+            .from('profiles')
+            .select('first_name, last_name, email, profile_photo_url')
+            .eq('id', user.id)
+            .single();
+          
+          if (currentUserProfile) {
+            memberProfiles.push({
+              id: insertData?.id || `temp-${user.id}`,
               user_id: user.id,
-              role: 'admin'
-            })
-            .then(async ({ error }) => {
-              if (error && error.code !== '23505') {
-                console.error("Error adding current user to company:", error);
-              } else {
-                console.log("Current user added to company members or already exists");
-                
-                const { data: currentUserProfile } = await supabase
-                  .from('profiles')
-                  .select('first_name, last_name, email, profile_photo_url')
-                  .eq('id', user.id)
-                  .single();
-                
-                if (currentUserProfile) {
-                  memberProfiles.push({
-                    id: `temp-${user.id}`,
-                    user_id: user.id,
-                    role: 'admin',
-                    first_name: currentUserProfile.first_name,
-                    last_name: currentUserProfile.last_name,
-                    email: currentUserProfile.email,
-                    profile_photo_url: currentUserProfile.profile_photo_url
-                  });
-                }
-              }
+              role: 'admin',
+              first_name: currentUserProfile.first_name,
+              last_name: currentUserProfile.last_name,
+              email: currentUserProfile.email,
+              profile_photo_url: currentUserProfile.profile_photo_url
             });
+          }
         }
       }
 
