@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,6 +32,13 @@ interface Invitation {
   email: string;
   status: 'pending' | 'accepted' | 'expired' | string;
   created_at: string;
+}
+
+interface MemberData {
+  id: string;
+  user_id: string;
+  role: string;
+  profiles: ProfileData;
 }
 
 const TeamMembers = () => {
@@ -134,8 +140,8 @@ const TeamMembers = () => {
       
       console.log("Raw members data:", membersData);
       
-      // Format the members data - Fix the TypeScript error by correctly accessing the profiles object
-      const formattedMembers = membersData.map(member => ({
+      // Format the members data - Fix the TypeScript error by correctly typing and accessing the data
+      const formattedMembers = membersData.map((member: any) => ({
         id: member.id,
         user_id: member.user_id,
         role: member.role || 'member',
