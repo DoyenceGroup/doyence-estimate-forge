@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,7 +52,6 @@ const TeamMembers = () => {
 
       if (!userProfile.company_id) {
         if (userProfile.company_name) {
-          // Try to trigger company creation
           console.log("Attempting to create company for:", userProfile.company_name);
           const { error: updateError } = await supabase
             .from('profiles')
@@ -107,7 +105,6 @@ const TeamMembers = () => {
     try {
       console.log("Fetching team members for company:", companyId);
       
-      // Changed the query to use a direct join instead of the problematic foreign key reference
       const { data: membersData, error: membersError } = await supabase
         .from('company_members')
         .select(`
@@ -124,12 +121,9 @@ const TeamMembers = () => {
       
       console.log("Raw members data:", membersData);
       
-      // Now fetch profiles separately to avoid the relationship issue
       const memberProfiles: TeamMember[] = [];
       
-      // Process each member
       for (const member of membersData) {
-        // Get profile information for this member
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('first_name, last_name, email, profile_photo_url')
@@ -153,11 +147,9 @@ const TeamMembers = () => {
 
       console.log("Processed member profiles:", memberProfiles);
       
-      // Make sure the current user is included in the members list
       if (user && !memberProfiles.some(m => m.user_id === user.id)) {
         console.log("Current user not found in members, may need to add them");
         
-        // Try to add current user as a company member if they're not already
         if (companyId) {
           console.log("Adding current user to company members");
           await supabase
@@ -165,15 +157,14 @@ const TeamMembers = () => {
             .insert({
               company_id: companyId,
               user_id: user.id,
-              role: 'admin' // First user is an admin
+              role: 'admin'
             })
-            .then(({ error }) => {
-              if (error && error.code !== '23505') { // Ignore duplicate key errors
+            .then(async ({ error }) => {
+              if (error && error.code !== '23505') {
                 console.error("Error adding current user to company:", error);
               } else {
                 console.log("Current user added to company members or already exists");
                 
-                // Add the current user to the members list
                 const { data: currentUserProfile } = await supabase
                   .from('profiles')
                   .select('first_name, last_name, email, profile_photo_url')
@@ -182,7 +173,7 @@ const TeamMembers = () => {
                 
                 if (currentUserProfile) {
                   memberProfiles.push({
-                    id: `temp-${user.id}`, // Will be updated on next fetch
+                    id: `temp-${user.id}`,
                     user_id: user.id,
                     role: 'admin',
                     first_name: currentUserProfile.first_name,
