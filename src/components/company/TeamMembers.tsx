@@ -10,25 +10,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { TeamMember } from "@/lib/types";
+import { TeamMember, TeamMemberData } from "@/lib/types";
 
 interface Invitation {
   id: string;
   email: string;
   status: 'pending' | 'accepted' | 'expired' | string;
   created_at: string;
-}
-
-interface MemberDataResponse {
-  id: string;
-  user_id: string;
-  role: string;
-  profiles: {
-    first_name: string | null;
-    last_name: string | null;
-    email: string | null;
-    profile_photo_url: string | null;
-  };
 }
 
 const TeamMembers = () => {
@@ -119,19 +107,13 @@ const TeamMembers = () => {
     try {
       console.log("Fetching team members for company:", companyId);
       
-      // First, fetch all members of the company by joining company_members with profiles
+      // Changed the query to use a direct join instead of the problematic foreign key reference
       const { data: membersData, error: membersError } = await supabase
         .from('company_members')
         .select(`
           id,
           user_id,
-          role,
-          profiles:user_id(
-            first_name,
-            last_name,
-            email,
-            profile_photo_url
-          )
+          role
         `)
         .eq('company_id', companyId);
 
@@ -142,41 +124,76 @@ const TeamMembers = () => {
       
       console.log("Raw members data:", membersData);
       
-      // Transform the data into the expected format
-      const formattedMembers: TeamMember[] = membersData.map((member: any) => {
-        console.log("Processing member:", member);
-        
-        // Handle when profiles is null, empty array, or first item is null
-        let profileData = { 
-          first_name: null, 
-          last_name: null, 
-          email: null, 
-          profile_photo_url: null 
-        };
-        
-        // Check if profiles exists and has data
-        if (member.profiles && Array.isArray(member.profiles) && member.profiles.length > 0) {
-          // Use first profile from array
-          profileData = member.profiles[0] || profileData;
-        } else if (member.profiles && !Array.isArray(member.profiles)) {
-          // If profiles is an object, not an array
-          profileData = member.profiles || profileData;
+      // Now fetch profiles separately to avoid the relationship issue
+      const memberProfiles: TeamMember[] = [];
+      
+      // Process each member
+      for (const member of membersData) {
+        // Get profile information for this member
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('first_name, last_name, email, profile_photo_url')
+          .eq('id', member.user_id)
+          .single();
+          
+        if (profileError) {
+          console.warn("Could not fetch profile for member:", member.user_id, profileError);
         }
         
-        return {
+        memberProfiles.push({
           id: member.id,
           user_id: member.user_id,
           role: member.role || 'member',
-          first_name: profileData.first_name || null,
-          last_name: profileData.last_name || null,
-          email: profileData.email || null,
-          profile_photo_url: profileData.profile_photo_url || null
-        };
-      });
+          first_name: profileData?.first_name || null,
+          last_name: profileData?.last_name || null,
+          email: profileData?.email || null,
+          profile_photo_url: profileData?.profile_photo_url || null
+        });
+      }
 
+      console.log("Processed member profiles:", memberProfiles);
+      
       // Make sure the current user is included in the members list
-      if (user && !formattedMembers.some(m => m.user_id === user.id)) {
+      if (user && !memberProfiles.some(m => m.user_id === user.id)) {
         console.log("Current user not found in members, may need to add them");
+        
+        // Try to add current user as a company member if they're not already
+        if (companyId) {
+          console.log("Adding current user to company members");
+          await supabase
+            .from('company_members')
+            .insert({
+              company_id: companyId,
+              user_id: user.id,
+              role: 'admin' // First user is an admin
+            })
+            .then(({ error }) => {
+              if (error && error.code !== '23505') { // Ignore duplicate key errors
+                console.error("Error adding current user to company:", error);
+              } else {
+                console.log("Current user added to company members or already exists");
+                
+                // Add the current user to the members list
+                const { data: currentUserProfile } = await supabase
+                  .from('profiles')
+                  .select('first_name, last_name, email, profile_photo_url')
+                  .eq('id', user.id)
+                  .single();
+                
+                if (currentUserProfile) {
+                  memberProfiles.push({
+                    id: `temp-${user.id}`, // Will be updated on next fetch
+                    user_id: user.id,
+                    role: 'admin',
+                    first_name: currentUserProfile.first_name,
+                    last_name: currentUserProfile.last_name,
+                    email: currentUserProfile.email,
+                    profile_photo_url: currentUserProfile.profile_photo_url
+                  });
+                }
+              }
+            });
+        }
       }
 
       console.log("Fetching invitations for company:", companyId);
@@ -190,10 +207,10 @@ const TeamMembers = () => {
         throw invitationsError;
       }
 
-      console.log("Members data:", formattedMembers);
+      console.log("Members data:", memberProfiles);
       console.log("Invitations data:", invitationsData);
 
-      setMembers(formattedMembers || []);
+      setMembers(memberProfiles || []);
       setInvitations(invitationsData || []);
       setNoCompany(false);
     } catch (error) {
