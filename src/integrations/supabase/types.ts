@@ -224,6 +224,10 @@ export type Database = {
         Args: { company_uuid: string; user_uuid: string }
         Returns: boolean
       }
+      user_is_company_member: {
+        Args: { _company_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
