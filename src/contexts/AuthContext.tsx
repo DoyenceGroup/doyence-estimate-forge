@@ -1,3 +1,4 @@
+
 import {
   createContext,
   useContext,
@@ -7,7 +8,7 @@ import {
 } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import { UserProfile } from "@/lib/types";
 
 type AuthContextType = {
@@ -92,23 +93,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           });
         } else {
           console.log("Profile data fetched:", data);
+          // Create a profile object with null values for missing fields
           const profileData: UserProfile = {
-            id: data.id,
-            user_id: data.id,
-            email: data.company_email,
-            first_name: data.first_name,
-            last_name: data.last_name,
-            phone_number: data.phone_number,
-            profile_photo_url: data.profile_photo_url,
-            company_role: data.company_role,
-            role: data.role,
-            profile_completed: data.profile_completed,
-            company_id: data.company_id,
-            company_name: data.company_name,
-            company_email: data.company_email,
-            company_address: data.company_address,
-            logo_url: data.logo_url,
-            website: data.website
+            id: data.id || "",
+            user_id: data.id || "",  // Use ID as user_id
+            email: data.company_email || null,
+            first_name: data.first_name || null,
+            last_name: data.last_name || null,
+            phone_number: data.phone_number || null,
+            profile_photo_url: data.profile_photo_url || null,
+            company_role: data.company_role || null,
+            role: data.role || null,
+            profile_completed: data.profile_completed || false,
+            company_id: data.company_id || null,
+            company_name: data.company_name || null,
+            company_email: data.company_email || null,
+            company_address: data.company_address || null,
+            logo_url: data.logo_url || null,
+            website: data.website || null
           };
           setProfile(profileData);
         }

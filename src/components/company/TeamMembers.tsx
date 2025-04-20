@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,117 +42,154 @@ const TeamMembers = () => {
         
         console.log("Using company ID:", companyId);
         
-        // First, get company members
-        const { data: memberData, error: memberError } = await supabase
-          .from('company_members')
-          .select('id, user_id, role')
-          .eq('company_id', companyId);
-        
-        if (memberError) {
-          console.error("Error fetching members:", memberError);
-          throw memberError;
-        }
-        
-        if (!memberData) {
-          console.log("No member data returned");
-          setMembers([]);
-        } else {
-          // Now fetch profile data for each member
-          const formattedMembers: TeamMember[] = [];
-          
-          for (const member of memberData) {
-            // Get profile data for this user_id
-            const { data: profileData, error: profileError } = await supabase
-              .from('profiles')
-              .select('first_name, last_name, phone_number, profile_photo_url, company_email')
-              .eq('id', member.user_id)
-              .single();
-              
-            if (profileError) {
-              console.error(`Error fetching profile for user ${member.user_id}:`, profileError);
-              // Still add the member with available data
-              formattedMembers.push({
-                id: member.id,
-                user_id: member.user_id,
-                role: member.role,
-                first_name: null,
-                last_name: null,
-                email: null,
-                profile_photo_url: null
-              });
-            } else if (profileData) {
-              formattedMembers.push({
-                id: member.id,
-                user_id: member.user_id,
-                role: member.role,
-                first_name: profileData.first_name,
-                last_name: profileData.last_name,
-                email: profileData.company_email,
-                profile_photo_url: profileData.profile_photo_url
-              });
-            }
-          }
-          
-          setMembers(formattedMembers);
-        }
-        
-        // Check if current user is in the list, add if not
-        if (user && !members.some(m => m.user_id === user.id)) {
-          // Add current user directly to company_members table
-          const { data: insertData, error: insertError } = await supabase
+        try {
+          // First, get company members
+          const { data: memberData, error: memberError } = await supabase
             .from('company_members')
-            .insert({
-              company_id: companyId,
-              user_id: user.id,
-              role: 'admin' // First user is an admin
-            })
-            .select('id')
-            .single();
+            .select('id, user_id, role')
+            .eq('company_id', companyId);
           
-          if (insertError && insertError.code !== '23505') { // Ignore duplicate key errors
-            console.error("Error adding current user to company:", insertError);
+          if (memberError) {
+            console.error("Error fetching members:", memberError);
+            throw memberError;
+          }
+          
+          if (!memberData) {
+            console.log("No member data returned");
+            setMembers([]);
           } else {
-            console.log("Current user added to company members or already exists");
+            // Now fetch profile data for each member
+            const formattedMembers: TeamMember[] = [];
             
-            // Add current user to the local members list if not already there
-            if (!members.some(m => m.user_id === user.id)) {
-              setMembers(prevMembers => [
-                ...prevMembers,
-                {
-                  id: insertData?.id || `temp-${user.id}`,
-                  user_id: user.id,
-                  role: 'admin',
-                  first_name: profile.first_name,
-                  last_name: profile.last_name,
-                  email: profile.email,
-                  profile_photo_url: profile.profile_photo_url
+            for (const member of memberData) {
+              try {
+                // Get profile data for this user_id
+                const { data: profileData, error: profileError } = await supabase
+                  .from('profiles')
+                  .select('first_name, last_name, phone_number, profile_photo_url, company_email')
+                  .eq('id', member.user_id)
+                  .single();
+                  
+                if (profileError) {
+                  console.error(`Error fetching profile for user ${member.user_id}:`, profileError);
+                  // Still add the member with available data
+                  formattedMembers.push({
+                    id: member.id,
+                    user_id: member.user_id,
+                    role: member.role,
+                    first_name: null,
+                    last_name: null,
+                    email: null,
+                    profile_photo_url: null
+                  });
+                } else if (profileData) {
+                  formattedMembers.push({
+                    id: member.id,
+                    user_id: member.user_id,
+                    role: member.role,
+                    first_name: profileData.first_name,
+                    last_name: profileData.last_name,
+                    email: profileData.company_email,
+                    profile_photo_url: profileData.profile_photo_url
+                  });
                 }
-              ]);
+              } catch (profileFetchError) {
+                console.error("Error in profile fetch:", profileFetchError);
+                // Add member with minimal data
+                formattedMembers.push({
+                  id: member.id,
+                  user_id: member.user_id,
+                  role: member.role,
+                  first_name: null,
+                  last_name: null,
+                  email: null,
+                  profile_photo_url: null
+                });
+              }
+            }
+            
+            setMembers(formattedMembers);
+          }
+        } catch (fetchError) {
+          console.error("Error fetching members:", fetchError);
+          toast({
+            title: "Error loading team members",
+            description: "Unable to load team members. Please try again later.",
+            variant: "destructive",
+          });
+        }
+        
+        try {
+          // Check if current user is in the list, add if not
+          if (user && !members.some(m => m.user_id === user.id)) {
+            try {
+              // Add current user directly to company_members table
+              const { data: insertData, error: insertError } = await supabase
+                .from('company_members')
+                .insert({
+                  company_id: companyId,
+                  user_id: user.id,
+                  role: 'admin' // First user is an admin
+                })
+                .select('id')
+                .single();
+              
+              if (insertError && insertError.code !== '23505') { // Ignore duplicate key errors
+                console.error("Error adding current user to company:", insertError);
+              } else {
+                console.log("Current user added to company members or already exists");
+                
+                // Add current user to the local members list if not already there
+                if (!members.some(m => m.user_id === user.id)) {
+                  setMembers(prevMembers => [
+                    ...prevMembers,
+                    {
+                      id: insertData?.id || `temp-${user.id}`,
+                      user_id: user.id,
+                      role: 'admin',
+                      first_name: profile.first_name,
+                      last_name: profile.last_name,
+                      email: profile.email,
+                      profile_photo_url: profile.profile_photo_url
+                    }
+                  ]);
+                }
+              }
+            } catch (insertMemberError) {
+              console.error("Error inserting member:", insertMemberError);
             }
           }
+        } catch (memberCheckError) {
+          console.error("Error in current member check:", memberCheckError);
         }
 
-        // Fetch invitations
-        const { data: invitationsData, error: invitationsError } = await supabase
-          .from('invitations')
-          .select('*')
-          .eq('company_id', companyId);
+        try {
+          // Fetch invitations
+          const { data: invitationsData, error: invitationsError } = await supabase
+            .from('invitations')
+            .select('*')
+            .eq('company_id', companyId);
 
-        if (invitationsError) {
-          console.error("Error fetching invitations:", invitationsError);
-          throw invitationsError;
+          if (invitationsError) {
+            console.error("Error fetching invitations:", invitationsError);
+            throw invitationsError;
+          }
+
+          // Type casting to ensure compatibility with CompanyInvitation[]
+          const typedInvitations = (invitationsData || []).map(inv => ({
+            ...inv,
+            status: (inv.status || 'pending') as 'pending' | 'accepted' | 'rejected'
+          }));
+
+          setInvitations(typedInvitations);
+        } catch (invitationError) {
+          console.error("Error fetching invitations:", invitationError);
+          setInvitations([]);
         }
-
-        // Type casting to ensure compatibility with CompanyInvitation[]
-        const typedInvitations = (invitationsData || []).map(inv => ({
-          ...inv,
-          status: (inv.status || 'pending') as 'pending' | 'accepted' | 'rejected'
-        }));
-
-        setInvitations(typedInvitations);
+        
         setNoCompany(false);
       } catch (error: any) {
-        console.error("Error fetching team data:", error);
+        console.error("Error in fetchData:", error);
         toast({
           title: "Error fetching team data",
           description: error.message || "An unexpected error occurred",
