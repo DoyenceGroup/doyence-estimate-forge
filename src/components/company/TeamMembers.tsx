@@ -114,7 +114,7 @@ const TeamMembers = () => {
           id,
           user_id,
           role,
-          profiles (
+          profiles:user_id (
             first_name,
             last_name,
             email,
@@ -129,10 +129,10 @@ const TeamMembers = () => {
       const formattedMembers = membersData.map(member => ({
         id: member.id,
         user_id: member.user_id,
+        role: member.role || 'member',
         first_name: member.profiles?.first_name || null,
         last_name: member.profiles?.last_name || null,
         email: member.profiles?.email || null,
-        role: member.role || 'member',
         profile_photo_url: member.profiles?.profile_photo_url || null
       }));
       
