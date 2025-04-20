@@ -2,24 +2,39 @@
 import { supabase } from "@/integrations/supabase/client";
 
 const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes in milliseconds
-
 let inactivityTimer: NodeJS.Timeout;
 let lastActivity = Date.now();
 
+// Track if we're in focus or not
+let isWindowFocused = true;
+
 const resetTimer = () => {
-  clearTimeout(inactivityTimer);
-  lastActivity = Date.now();
-  
-  inactivityTimer = setTimeout(async () => {
-    const timeSinceLastActivity = Date.now() - lastActivity;
-    if (timeSinceLastActivity >= INACTIVITY_TIMEOUT) {
-      await supabase.auth.signOut();
-    }
-  }, INACTIVITY_TIMEOUT);
+  // Only reset the timer if we're in focus to prevent unnecessary reloads
+  if (isWindowFocused) {
+    clearTimeout(inactivityTimer);
+    lastActivity = Date.now();
+    
+    inactivityTimer = setTimeout(async () => {
+      const timeSinceLastActivity = Date.now() - lastActivity;
+      if (timeSinceLastActivity >= INACTIVITY_TIMEOUT) {
+        await supabase.auth.signOut();
+      }
+    }, INACTIVITY_TIMEOUT);
+  }
 };
 
 export const initializeSessionTimeout = () => {
-  // Reset timer on user activity
+  // Track window focus/blur events
+  window.addEventListener('focus', () => {
+    isWindowFocused = true;
+    resetTimer(); // Reset timer when window gets focus
+  });
+  
+  window.addEventListener('blur', () => {
+    isWindowFocused = false;
+  });
+  
+  // Reset timer on user activity, but only when the window is in focus
   ['mousedown', 'keydown', 'touchstart', 'scroll'].forEach(event => {
     window.addEventListener(event, resetTimer);
   });
@@ -30,6 +45,8 @@ export const initializeSessionTimeout = () => {
     ['mousedown', 'keydown', 'touchstart', 'scroll'].forEach(event => {
       window.removeEventListener(event, resetTimer);
     });
+    window.removeEventListener('focus', resetTimer);
+    window.removeEventListener('blur', () => { isWindowFocused = false; });
     clearTimeout(inactivityTimer);
   };
 };
