@@ -10,20 +10,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Menu, UserCircle, LogOut, Settings } from "lucide-react";
+import { Menu, LogOut, Settings } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface NavbarProps {
   onMobileMenuToggle: () => void;
 }
 
 const Navbar = ({ onMobileMenuToggle }: NavbarProps) => {
-  const { user, signOut } = useAuth();
-  const [profileData, setProfileData] = useState<Partial<User> | null>(null);
+  const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
-  
-  // We'll use the user object directly from the auth context
-  // No need to fetch from localStorage
 
   const handleLogout = async () => {
     await signOut();
@@ -63,16 +60,26 @@ const Navbar = ({ onMobileMenuToggle }: NavbarProps) => {
                     variant="ghost"
                     className="flex items-center gap-2 hover:bg-gray-100 rounded-full px-3 py-2"
                   >
-                    <UserCircle className="h-6 w-6 text-gray-600" />
+                    <Avatar className="h-8 w-8">
+                      {profile?.profile_photo_url ? (
+                        <AvatarImage src={profile.profile_photo_url} alt="Profile" />
+                      ) : (
+                        <AvatarFallback>
+                          {profile?.first_name?.charAt(0) ?? user.email?.charAt(0) ?? "U"}
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
                     <span className="hidden sm:inline-block font-medium text-sm">
-                      {user.email?.split('@')[0] || "User"}
+                      {profile?.first_name
+                        ? `${profile.first_name}${profile.last_name ? " " + profile.last_name : ""}`
+                        : user.email?.split('@')[0] || "User"}
                     </span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <div className="px-4 py-3">
                     <p className="text-sm font-medium">
-                      {user.email}
+                      {profile?.email || user.email}
                     </p>
                   </div>
                   <DropdownMenuSeparator />

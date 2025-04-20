@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -170,7 +169,7 @@ const Settings = () => {
                 <div className="flex justify-center mb-4">
                   <ProfilePhotoUpload 
                     onImageUpload={setProfilePhotoUrl}
-                    initialImage={profilePhotoUrl || undefined}
+                    initialImage={profilePhotoUrl || profile?.profile_photo_url || undefined}
                   />
                 </div>
                 
