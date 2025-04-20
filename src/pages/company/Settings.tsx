@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ import { useToast } from "@/components/ui/use-toast";
 import ProfilePhotoUpload from "@/components/ui/profile-photo-upload";
 import LogoUpload from "@/components/ui/logo-upload";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import { Building, Mail, Phone, Globe, MapPin, Users, Palette } from "lucide-react";
 import CompanyInvite from "@/components/company/CompanyInvite";
 import CompanyTheme from "@/components/company/CompanyTheme";

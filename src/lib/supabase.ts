@@ -35,3 +35,6 @@ export async function isUserCompanyMember(companyId: string, userId: string): Pr
     return false;
   }
 }
+
+// Export the supabase instance
+export { supabase };

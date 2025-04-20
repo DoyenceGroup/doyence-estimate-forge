@@ -42,34 +42,36 @@ const TeamMembers = () => {
         
         console.log("Using company ID:", companyId);
         
-        // Fetch profiles directly with a join to company_members
-        // This avoids the RLS circular reference issue
-        const { data: memberProfiles, error: memberError } = await supabase
-          .from('profiles')
+        // Direct query to fetch company members and join with profiles
+        const { data: memberData, error: memberError } = await supabase
+          .from('company_members')
           .select(`
             id,
-            first_name,
-            last_name,
-            email,
-            profile_photo_url,
-            company_members!inner(id, role)
+            user_id,
+            role,
+            profiles:user_id (
+              first_name,
+              last_name,
+              email,
+              profile_photo_url
+            )
           `)
-          .eq('company_members.company_id', companyId);
+          .eq('company_id', companyId);
         
         if (memberError) {
-          console.error("Error fetching member profiles:", memberError);
+          console.error("Error fetching members:", memberError);
           throw memberError;
         }
         
         // Format the data to match the TeamMember type
-        const formattedMembers: TeamMember[] = memberProfiles?.map(profile => ({
-          id: profile.company_members[0].id,
-          user_id: profile.id,
-          role: profile.company_members[0].role,
-          first_name: profile.first_name,
-          last_name: profile.last_name,
-          email: profile.email,
-          profile_photo_url: profile.profile_photo_url
+        const formattedMembers: TeamMember[] = memberData?.map(member => ({
+          id: member.id,
+          user_id: member.user_id,
+          role: member.role,
+          first_name: member.profiles?.first_name || null,
+          last_name: member.profiles?.last_name || null,
+          email: member.profiles?.email || null,
+          profile_photo_url: member.profiles?.profile_photo_url || null
         })) || [];
         
         // Check if current user is in the list, add if not
@@ -115,7 +117,11 @@ const TeamMembers = () => {
         }
 
         setMembers(formattedMembers);
-        setInvitations(invitationsData || []);
+        // Type casting to ensure compatibility with CompanyInvitation[]
+        setInvitations(invitationsData?.map(inv => ({
+          ...inv,
+          status: (inv.status || 'pending') as 'pending' | 'accepted' | 'rejected'
+        })) || []);
         setNoCompany(false);
       } catch (error) {
         console.error("Error fetching team data:", error);

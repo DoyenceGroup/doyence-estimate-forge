@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import LogoUpload from "@/components/ui/logo-upload";
 import ProfilePhotoUpload from "@/components/ui/profile-photo-upload";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import { Building, Briefcase } from "lucide-react";
 import JoinCompany from "./JoinCompany";
 
