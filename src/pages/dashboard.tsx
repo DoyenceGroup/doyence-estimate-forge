@@ -1,17 +1,16 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, Users, Clock, Wrench, FileSpreadsheet } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/layout/Navbar";
+import { Link } from "react-router-dom";
 
 const Dashboard = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { user, profile } = useAuth();
   const navigate = useNavigate();
 
-  // Mock dashboard data
   const stats = [
     { name: "Active Estimates", value: "5", icon: FileText, color: "text-blue-500" },
     { name: "Total Customers", value: "12", icon: Users, color: "text-green-500" },
@@ -19,7 +18,6 @@ const Dashboard = () => {
     { name: "Recent Projects", value: "8", icon: Wrench, color: "text-purple-500" },
   ];
 
-  // Recent activity mock data
   const recentActivity = [
     { id: 1, action: "Estimate created", project: "Kitchen Renovation", customer: "John Smith", time: "2 hours ago" },
     { id: 2, action: "Customer added", project: "", customer: "Sarah Johnson", time: "Yesterday" },
@@ -29,23 +27,20 @@ const Dashboard = () => {
 
   return (
     <div className="h-screen flex flex-col">
-      {/* Use the Navbar component with the toggle function */}
       <Navbar onMobileMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)} />
       
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar placeholder */}
         <div className={`${isSidebarOpen ? 'block' : 'hidden'} lg:block fixed inset-y-0 left-0 z-50 w-64 bg-gray-800 text-white p-4 transform transition-transform lg:relative lg:translate-x-0`}>
           <div className="mt-16 space-y-1">
-            <div className="p-2 rounded hover:bg-gray-700 cursor-pointer">Dashboard</div>
-            <div className="p-2 rounded hover:bg-gray-700 cursor-pointer">Estimates</div>
-            <div className="p-2 rounded hover:bg-gray-700 cursor-pointer">Customers</div>
-            <div className="p-2 rounded hover:bg-gray-700 cursor-pointer">Settings</div>
+            <Link to="/dashboard" className="block p-2 rounded hover:bg-gray-700 cursor-pointer">Dashboard</Link>
+            <Link to="/estimates" className="block p-2 rounded hover:bg-gray-700 cursor-pointer">Estimates</Link>
+            <Link to="/customers" className="block p-2 rounded hover:bg-gray-700 cursor-pointer">Customers</Link>
+            <Link to="/settings" className="block p-2 rounded hover:bg-gray-700 cursor-pointer">Settings</Link>
           </div>
         </div>
         
         <div className="flex-1 overflow-auto p-6 lg:pl-64">
           <div className="max-w-7xl mx-auto">
-            {/* Welcome message */}
             <header className="mb-6">
               <h1 className="text-2xl font-bold text-gray-900">
                 Welcome{profile?.first_name && profile?.last_name ? `, ${profile.first_name} ${profile.last_name}` : ""}!
@@ -55,7 +50,6 @@ const Dashboard = () => {
               </p>
             </header>
             
-            {/* Stats overview */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
               {stats.map((stat) => (
                 <Card key={stat.name}>
@@ -72,7 +66,6 @@ const Dashboard = () => {
               ))}
             </div>
             
-            {/* Recent activity */}
             <Card className="mb-6">
               <CardHeader>
                 <CardTitle>Recent Activity</CardTitle>

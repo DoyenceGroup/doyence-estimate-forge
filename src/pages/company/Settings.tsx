@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -138,9 +137,14 @@ const Settings = () => {
 
   return (
     <div className="container mx-auto py-6 max-w-4xl">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-gray-500">Manage your account and company settings</p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold">Settings</h1>
+          <p className="text-gray-500">Manage your account and company settings</p>
+        </div>
+        <Button variant="outline" onClick={() => navigate("/dashboard")}>
+          Back to Dashboard
+        </Button>
       </div>
 
       <Tabs defaultValue="personal" className="w-full">

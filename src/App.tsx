@@ -1,6 +1,7 @@
-
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { useEffect } from "react";
+import { initializeSessionTimeout } from "@/utils/sessionTimeout";
 import Dashboard from "@/pages/dashboard";
 import Login from "@/pages/login";
 import Signup from "@/pages/signup";
@@ -38,53 +39,60 @@ const UnauthenticatedOnlyRoute = ({ children }: { children: JSX.Element }) => {
   return children;
 };
 
-const AppRoutes = () => (
-  <Routes>
-    <Route
-      path="/dashboard"
-      element={
-        <ProtectedRoute>
-          <Dashboard />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="/profile-setup"
-      element={
-        <ProtectedRoute>
-          <ProfileSetup />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="/settings"
-      element={
-        <ProtectedRoute>
-          <Settings />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="/login"
-      element={
-        <UnauthenticatedOnlyRoute>
-          <Login />
-        </UnauthenticatedOnlyRoute>
-      }
-    />
-    <Route
-      path="/signup"
-      element={
-        <UnauthenticatedOnlyRoute>
-          <Signup />
-        </UnauthenticatedOnlyRoute>
-      }
-    />
-    <Route path="/verify" element={<Verify />} />
-    <Route path="/" element={<Index />} />
-    <Route path="*" element={<Navigate to="/" replace />} />
-  </Routes>
-);
+const AppRoutes = () => {
+  useEffect(() => {
+    const cleanup = initializeSessionTimeout();
+    return () => cleanup();
+  }, []);
+
+  return (
+    <Routes>
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile-setup"
+        element={
+          <ProtectedRoute>
+            <ProfileSetup />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <Settings />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/login"
+        element={
+          <UnauthenticatedOnlyRoute>
+            <Login />
+          </UnauthenticatedOnlyRoute>
+        }
+      />
+      <Route
+        path="/signup"
+        element={
+          <UnauthenticatedOnlyRoute>
+            <Signup />
+          </UnauthenticatedOnlyRoute>
+        }
+      />
+      <Route path="/verify" element={<Verify />} />
+      <Route path="/" element={<Index />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+};
 
 function App() {
   return (
