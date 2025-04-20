@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,36 +10,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-
-interface ProfileData {
-  first_name: string | null;
-  last_name: string | null;
-  email: string | null;
-  profile_photo_url: string | null;
-}
-
-interface TeamMember {
-  id: string;
-  user_id: string;
-  first_name: string | null;
-  last_name: string | null;
-  email: string | null;
-  role: string;
-  profile_photo_url: string | null;
-}
+import { TeamMemberData, TeamMember } from "@/lib/types";
 
 interface Invitation {
   id: string;
   email: string;
   status: 'pending' | 'accepted' | 'expired' | string;
   created_at: string;
-}
-
-interface MemberData {
-  id: string;
-  user_id: string;
-  role: string;
-  profiles: ProfileData;
 }
 
 const TeamMembers = () => {
@@ -136,7 +114,8 @@ const TeamMembers = () => {
       
       console.log("Raw members data:", membersData);
       
-      const formattedMembers = (membersData as MemberData[]).map(member => ({
+      // Transform the data into the expected format
+      const formattedMembers: TeamMember[] = (membersData as any[]).map(member => ({
         id: member.id,
         user_id: member.user_id,
         role: member.role || 'member',

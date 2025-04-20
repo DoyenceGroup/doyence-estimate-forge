@@ -45,3 +45,27 @@ export interface UserProfile {
   logo_url: string | null;
   website: string | null;
 }
+
+export interface TeamMemberProfile {
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  profile_photo_url: string | null;
+}
+
+export interface TeamMemberData {
+  id: string;
+  user_id: string;
+  role: string;
+  profiles: TeamMemberProfile;
+}
+
+export interface TeamMember {
+  id: string;
+  user_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  role: string;
+  profile_photo_url: string | null;
+}
