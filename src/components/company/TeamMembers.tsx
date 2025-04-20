@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,12 +13,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 
 interface TeamMember {
   id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
+  user_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
   role: string;
   profile_photo_url: string | null;
-  status: 'active' | 'pending' | 'inactive';
 }
 
 interface Invitation {
@@ -106,13 +107,34 @@ const TeamMembers = () => {
 
   const fetchWithCompanyId = async (companyId: string) => {
     try {
-      // Fetch members (profiles with the same company_id)
+      // Fetch members using company_members table and join with profiles
       const { data: membersData, error: membersError } = await supabase
-        .from('profiles')
-        .select('*')
+        .from('company_members')
+        .select(`
+          id,
+          user_id,
+          role,
+          profiles (
+            first_name,
+            last_name,
+            email,
+            profile_photo_url
+          )
+        `)
         .eq('company_id', companyId);
 
       if (membersError) throw membersError;
+      
+      // Format the members data
+      const formattedMembers = membersData.map(member => ({
+        id: member.id,
+        user_id: member.user_id,
+        first_name: member.profiles?.first_name || null,
+        last_name: member.profiles?.last_name || null,
+        email: member.profiles?.email || null,
+        role: member.role || 'member',
+        profile_photo_url: member.profiles?.profile_photo_url || null
+      }));
       
       // Fetch invitations for this company
       const { data: invitationsData, error: invitationsError } = await supabase
@@ -122,10 +144,10 @@ const TeamMembers = () => {
 
       if (invitationsError) throw invitationsError;
 
-      console.log("Members data:", membersData);
+      console.log("Members data:", formattedMembers);
       console.log("Invitations data:", invitationsData);
 
-      setMembers(membersData || []);
+      setMembers(formattedMembers || []);
       setInvitations(invitationsData || []);
       setNoCompany(false);
     } catch (error) {
@@ -152,6 +174,14 @@ const TeamMembers = () => {
       )
       .on(
         'postgres_changes',
+        { event: '*', schema: 'public', table: 'company_members' },
+        () => {
+          console.log("Received realtime update for company_members");
+          fetchTeamData();
+        }
+      )
+      .on(
+        'postgres_changes',
         { event: '*', schema: 'public', table: 'profiles' },
         () => {
           console.log("Received realtime update for profiles");
@@ -165,11 +195,12 @@ const TeamMembers = () => {
     };
   }, [profile?.company_id, user?.id]);
   
-  const handleRemoveMember = async (memberId: string) => {
+  const handleRemoveMember = async (memberId: string, userId: string) => {
     try {
+      // Delete the company_members entry
       const { error } = await supabase
-        .from('profiles')
-        .update({ company_id: null })
+        .from('company_members')
+        .delete()
         .eq('id', memberId);
       
       if (error) throw error;
@@ -213,7 +244,7 @@ const TeamMembers = () => {
     }
   };
   
-  const getInitials = (firstName: string, lastName: string) => {
+  const getInitials = (firstName: string | null, lastName: string | null) => {
     return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase() || 'U';
   };
 
@@ -275,20 +306,20 @@ const TeamMembers = () => {
                           {member.profile_photo_url && (
                             <AvatarImage src={member.profile_photo_url} alt={`${member.first_name} ${member.last_name}`} />
                           )}
-                          <AvatarFallback>{getInitials(member.first_name || '', member.last_name || '')}</AvatarFallback>
+                          <AvatarFallback>{getInitials(member.first_name, member.last_name)}</AvatarFallback>
                         </Avatar>
                         <div>
                           <div className="font-medium">
                             {member.first_name || ''} {member.last_name || ''}
-                            {member.id === user?.id && <span className="ml-2 text-xs text-gray-500">(You)</span>}
+                            {member.user_id === user?.id && <span className="ml-2 text-xs text-gray-500">(You)</span>}
                           </div>
-                          <div className="text-sm text-gray-500">{member.email}</div>
+                          <div className="text-sm text-gray-500">{member.email || 'No email'}</div>
                         </div>
                       </div>
                       <div className="flex items-center space-x-3">
                         <Badge variant="outline">{member.role || 'Member'}</Badge>
                         
-                        {member.id !== user?.id && (
+                        {member.user_id !== user?.id && (
                           <Dialog>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -313,7 +344,7 @@ const TeamMembers = () => {
                               </DialogHeader>
                               <DialogFooter>
                                 <Button variant="outline" onClick={() => {}}>Cancel</Button>
-                                <Button variant="destructive" onClick={() => handleRemoveMember(member.id)}>Remove</Button>
+                                <Button variant="destructive" onClick={() => handleRemoveMember(member.id, member.user_id)}>Remove</Button>
                               </DialogFooter>
                             </DialogContent>
                           </Dialog>
