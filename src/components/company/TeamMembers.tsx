@@ -19,18 +19,6 @@ interface Invitation {
   created_at: string;
 }
 
-interface MemberDataResponse {
-  id: string;
-  user_id: string;
-  role: string;
-  profiles: {
-    first_name: string | null;
-    last_name: string | null;
-    email: string | null;
-    profile_photo_url: string | null;
-  };
-}
-
 const TeamMembers = () => {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
@@ -143,25 +131,10 @@ const TeamMembers = () => {
       console.log("Raw members data:", membersData);
       
       // Transform the data into the expected format
-      const formattedMembers: TeamMember[] = membersData.map((member: any) => {
+      const formattedMembers: TeamMember[] = membersData.map(member => {
         console.log("Processing member:", member);
-        
-        // Handle when profiles is null, empty array, or first item is null
-        let profileData = { 
-          first_name: null, 
-          last_name: null, 
-          email: null, 
-          profile_photo_url: null 
-        };
-        
         // Check if profiles exists and has data
-        if (member.profiles && Array.isArray(member.profiles) && member.profiles.length > 0) {
-          // Use first profile from array
-          profileData = member.profiles[0] || profileData;
-        } else if (member.profiles && !Array.isArray(member.profiles)) {
-          // If profiles is an object, not an array
-          profileData = member.profiles || profileData;
-        }
+        const profileData = member.profiles || {};
         
         return {
           id: member.id,

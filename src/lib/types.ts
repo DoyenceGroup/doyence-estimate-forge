@@ -57,7 +57,7 @@ export interface TeamMemberData {
   id: string;
   user_id: string;
   role: string;
-  profiles: TeamMemberProfile[];
+  profiles: TeamMemberProfile;
 }
 
 export interface TeamMember {
