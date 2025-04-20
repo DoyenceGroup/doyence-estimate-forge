@@ -217,16 +217,10 @@ export type Database = {
         Returns: string
       }
       get_user_company_id: {
-        Args: Record<PropertyKey, never> | { user_uuid: string }
+        Args: { user_uuid: string }
         Returns: string
       }
       is_company_member: {
-        Args:
-          | { company_id: string }
-          | { company_uuid: string; user_uuid: string }
-        Returns: boolean
-      }
-      user_is_company_member: {
         Args: { company_uuid: string; user_uuid: string }
         Returns: boolean
       }
