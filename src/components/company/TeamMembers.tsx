@@ -56,7 +56,6 @@ const TeamMembers = () => {
     }
 
     try {
-      // First check if the user has a company_id
       const { data: userProfile, error: profileError } = await supabase
         .from('profiles')
         .select('company_id, company_name')
@@ -71,7 +70,6 @@ const TeamMembers = () => {
       }
 
       if (!userProfile.company_id) {
-        // If user has company name but no company_id, trigger an update to create the company
         if (userProfile.company_name) {
           const { error: updateError } = await supabase
             .from('profiles')
@@ -85,7 +83,6 @@ const TeamMembers = () => {
             return;
           }
 
-          // Fetch the updated profile to get the new company_id
           const { data: updatedProfile, error: updatedProfileError } = await supabase
             .from('profiles')
             .select('company_id')
@@ -120,7 +117,6 @@ const TeamMembers = () => {
 
   const fetchWithCompanyId = async (companyId: string) => {
     try {
-      // Fetch members using company_members table and join with profiles
       const { data: membersData, error: membersError } = await supabase
         .from('company_members')
         .select(`
@@ -140,19 +136,16 @@ const TeamMembers = () => {
       
       console.log("Raw members data:", membersData);
       
-      // Format the members data - Fix the TypeScript error by correctly typing and accessing the data
-      const formattedMembers = membersData.map((member: any) => ({
+      const formattedMembers = (membersData as MemberData[]).map(member => ({
         id: member.id,
         user_id: member.user_id,
         role: member.role || 'member',
-        // Access the properties correctly from the profiles object
-        first_name: member.profiles ? member.profiles.first_name : null,
-        last_name: member.profiles ? member.profiles.last_name : null,
-        email: member.profiles ? member.profiles.email : null,
-        profile_photo_url: member.profiles ? member.profiles.profile_photo_url : null
+        first_name: member.profiles?.first_name || null,
+        last_name: member.profiles?.last_name || null,
+        email: member.profiles?.email || null,
+        profile_photo_url: member.profiles?.profile_photo_url || null
       }));
-      
-      // Fetch invitations for this company
+
       const { data: invitationsData, error: invitationsError } = await supabase
         .from('invitations')
         .select('*')
@@ -163,7 +156,7 @@ const TeamMembers = () => {
       console.log("Members data:", formattedMembers);
       console.log("Invitations data:", invitationsData);
 
-      setMembers(formattedMembers || []);
+      setMembers(formattedMembers);
       setInvitations(invitationsData || []);
       setNoCompany(false);
     } catch (error) {
@@ -177,7 +170,6 @@ const TeamMembers = () => {
   useEffect(() => {
     fetchTeamData();
     
-    // Set up realtime subscription for invitations
     const channel = supabase
       .channel('team-changes')
       .on(
@@ -213,7 +205,6 @@ const TeamMembers = () => {
   
   const handleRemoveMember = async (memberId: string, userId: string) => {
     try {
-      // Delete the company_members entry
       const { error } = await supabase
         .from('company_members')
         .delete()
