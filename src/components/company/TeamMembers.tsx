@@ -11,6 +11,13 @@ import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
+interface ProfileData {
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  profile_photo_url: string | null;
+}
+
 interface TeamMember {
   id: string;
   user_id: string;
@@ -125,15 +132,18 @@ const TeamMembers = () => {
 
       if (membersError) throw membersError;
       
-      // Format the members data
+      console.log("Raw members data:", membersData);
+      
+      // Format the members data - Fix the TypeScript error by correctly accessing the profiles object
       const formattedMembers = membersData.map(member => ({
         id: member.id,
         user_id: member.user_id,
         role: member.role || 'member',
-        first_name: member.profiles?.first_name || null,
-        last_name: member.profiles?.last_name || null,
-        email: member.profiles?.email || null,
-        profile_photo_url: member.profiles?.profile_photo_url || null
+        // Access the properties correctly from the profiles object
+        first_name: member.profiles ? member.profiles.first_name : null,
+        last_name: member.profiles ? member.profiles.last_name : null,
+        email: member.profiles ? member.profiles.email : null,
+        profile_photo_url: member.profiles ? member.profiles.profile_photo_url : null
       }));
       
       // Fetch invitations for this company
