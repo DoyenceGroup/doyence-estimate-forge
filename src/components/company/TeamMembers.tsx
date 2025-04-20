@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { TeamMemberData, TeamMember } from "@/lib/types";
+import { TeamMember } from "@/lib/types";
 
 interface Invitation {
   id: string;
@@ -34,6 +34,8 @@ const TeamMembers = () => {
     }
 
     try {
+      console.log("Fetching team data for user:", user.id);
+      
       const { data: userProfile, error: profileError } = await supabase
         .from('profiles')
         .select('company_id, company_name')
@@ -47,8 +49,12 @@ const TeamMembers = () => {
         return;
       }
 
+      console.log("User profile data:", userProfile);
+
       if (!userProfile.company_id) {
         if (userProfile.company_name) {
+          // Try to trigger company creation
+          console.log("Attempting to create company for:", userProfile.company_name);
           const { error: updateError } = await supabase
             .from('profiles')
             .update({ updated_at: new Date().toISOString() })
@@ -68,19 +74,23 @@ const TeamMembers = () => {
             .single();
 
           if (updatedProfileError || !updatedProfile.company_id) {
+            console.error("Error getting updated profile or no company_id:", updatedProfileError);
             setNoCompany(true);
             setIsLoading(false);
             return;
           }
 
+          console.log("Company created with ID:", updatedProfile.company_id);
           await fetchWithCompanyId(updatedProfile.company_id);
         } else {
+          console.log("No company name set in profile");
           setNoCompany(true);
           setIsLoading(false);
         }
         return;
       }
       
+      console.log("Using existing company ID:", userProfile.company_id);
       await fetchWithCompanyId(userProfile.company_id);
     } catch (error: any) {
       console.error("Error fetching team data:", error);
@@ -95,13 +105,16 @@ const TeamMembers = () => {
 
   const fetchWithCompanyId = async (companyId: string) => {
     try {
+      console.log("Fetching team members for company:", companyId);
+      
+      // First, fetch all members of the company by joining company_members with profiles
       const { data: membersData, error: membersError } = await supabase
         .from('company_members')
         .select(`
           id,
           user_id,
           role,
-          profiles:user_id (
+          profiles:user_id(
             first_name,
             last_name,
             email,
@@ -110,32 +123,50 @@ const TeamMembers = () => {
         `)
         .eq('company_id', companyId);
 
-      if (membersError) throw membersError;
+      if (membersError) {
+        console.error("Error fetching members:", membersError);
+        throw membersError;
+      }
       
       console.log("Raw members data:", membersData);
       
       // Transform the data into the expected format
-      const formattedMembers: TeamMember[] = (membersData as any[]).map(member => ({
-        id: member.id,
-        user_id: member.user_id,
-        role: member.role || 'member',
-        first_name: member.profiles?.first_name || null,
-        last_name: member.profiles?.last_name || null,
-        email: member.profiles?.email || null,
-        profile_photo_url: member.profiles?.profile_photo_url || null
-      }));
+      const formattedMembers: TeamMember[] = membersData.map(member => {
+        console.log("Processing member:", member);
+        // Check if profiles exists and has data
+        const profileData = member.profiles || {};
+        
+        return {
+          id: member.id,
+          user_id: member.user_id,
+          role: member.role || 'member',
+          first_name: profileData.first_name || null,
+          last_name: profileData.last_name || null,
+          email: profileData.email || null,
+          profile_photo_url: profileData.profile_photo_url || null
+        };
+      });
 
+      // Make sure the current user is included in the members list
+      if (user && !formattedMembers.some(m => m.user_id === user.id)) {
+        console.log("Current user not found in members, may need to add them");
+      }
+
+      console.log("Fetching invitations for company:", companyId);
       const { data: invitationsData, error: invitationsError } = await supabase
         .from('invitations')
         .select('*')
         .eq('company_id', companyId);
 
-      if (invitationsError) throw invitationsError;
+      if (invitationsError) {
+        console.error("Error fetching invitations:", invitationsError);
+        throw invitationsError;
+      }
 
       console.log("Members data:", formattedMembers);
       console.log("Invitations data:", invitationsData);
 
-      setMembers(formattedMembers);
+      setMembers(formattedMembers || []);
       setInvitations(invitationsData || []);
       setNoCompany(false);
     } catch (error) {

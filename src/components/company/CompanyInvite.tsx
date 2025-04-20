@@ -44,6 +44,8 @@ const CompanyInvite = () => {
     setIsLoading(true);
     
     try {
+      console.log("Starting invitation process");
+      
       // First, ensure we have a company_id
       const { data: userProfile, error: profileError } = await supabase
         .from('profiles')
@@ -51,16 +53,25 @@ const CompanyInvite = () => {
         .eq('id', user.id)
         .single();
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error("Failed to fetch profile:", profileError);
+        throw profileError;
+      }
+
+      console.log("User profile fetched:", userProfile);
 
       if (!userProfile.company_id && userProfile.company_name) {
+        console.log("No company_id but company_name exists, triggering company creation");
         // Trigger company creation by updating the profile
         const { error: updateError } = await supabase
           .from('profiles')
           .update({ updated_at: new Date().toISOString() })
           .eq('id', user.id);
 
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error("Failed to update profile:", updateError);
+          throw updateError;
+        }
 
         // Fetch the updated profile to get the new company_id
         const { data: updatedProfile, error: updatedProfileError } = await supabase
@@ -70,10 +81,14 @@ const CompanyInvite = () => {
           .single();
 
         if (updatedProfileError || !updatedProfile.company_id) {
+          console.error("Failed to get updated profile or no company_id:", updatedProfileError);
           throw new Error("Failed to create company. Please set up your company information first.");
         }
 
+        console.log("Company created, new company_id:", updatedProfile.company_id);
+        
         // Create invitations with the new company_id
+        console.log("Creating invitations with new company_id");
         const { error: inviteError } = await supabase
           .from('invitations')
           .insert(
@@ -84,11 +99,17 @@ const CompanyInvite = () => {
             }))
           );
 
-        if (inviteError) throw inviteError;
+        if (inviteError) {
+          console.error("Failed to create invitations:", inviteError);
+          throw inviteError;
+        }
+        
       } else if (!userProfile.company_id) {
+        console.error("No company found");
         throw new Error("No company found. Please set up your company information first.");
       } else {
         // Create invitations with existing company_id
+        console.log("Creating invitations with existing company_id:", userProfile.company_id);
         const { error: inviteError } = await supabase
           .from('invitations')
           .insert(
@@ -99,7 +120,10 @@ const CompanyInvite = () => {
             }))
           );
 
-        if (inviteError) throw inviteError;
+        if (inviteError) {
+          console.error("Failed to create invitations:", inviteError);
+          throw inviteError;
+        }
       }
       
       toast({
