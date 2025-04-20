@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,71 +33,101 @@ const TeamMembers = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const { user, profile } = useAuth();
-  
-  useEffect(() => {
-    // In a real implementation, we would fetch team members from the database
-    // For now, we'll just use mock data
-    const mockMembers: TeamMember[] = [
-      {
-        id: user?.id || "1",
-        first_name: profile?.first_name || "Current",
-        last_name: profile?.last_name || "User",
-        email: user?.email || "current@example.com",
-        role: "Owner",
-        profile_photo_url: profile?.profile_photo_url,
-        status: 'active'
-      },
-      {
-        id: "2",
-        first_name: "Jane",
-        last_name: "Smith",
-        email: "jane@example.com",
-        role: "Project Manager",
-        profile_photo_url: null,
-        status: 'active'
-      }
-    ];
-    
-    const mockInvitations: Invitation[] = [
-      {
-        id: "inv1",
-        email: "mark@example.com",
-        status: 'pending',
-        created_at: new Date().toISOString()
-      },
-      {
-        id: "inv2",
-        email: "sarah@example.com",
-        status: 'pending',
-        created_at: new Date().toISOString()
-      }
-    ];
-    
-    setMembers(mockMembers);
-    setInvitations(mockInvitations);
-    setIsLoading(false);
-  }, [user, profile]);
-  
-  const handleRemoveMember = (memberId: string) => {
-    // In a real implementation, we would remove the member from the database
-    // For now, we'll just update the local state
-    setMembers(members.filter(member => member.id !== memberId));
-    
-    toast({
-      title: "Team member removed",
-      description: "The team member has been removed from your company.",
-    });
+
+  const fetchTeamData = async () => {
+    if (!profile?.company_id) return;
+
+    try {
+      const { data: membersData, error: membersError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('company_id', profile.company_id);
+
+      if (membersError) throw membersError;
+      
+      const { data: invitationsData, error: invitationsError } = await supabase
+        .from('invitations')
+        .select('*')
+        .eq('company_id', profile.company_id);
+
+      if (invitationsError) throw invitationsError;
+
+      setMembers(membersData || []);
+      setInvitations(invitationsData || []);
+    } catch (error: any) {
+      toast({
+        title: "Error fetching team data",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
   
-  const handleCancelInvitation = (invitationId: string) => {
-    // In a real implementation, we would cancel the invitation in the database
-    // For now, we'll just update the local state
-    setInvitations(invitations.filter(invitation => invitation.id !== invitationId));
+  useEffect(() => {
+    fetchTeamData();
     
-    toast({
-      title: "Invitation cancelled",
-      description: "The invitation has been cancelled.",
-    });
+    const channel = supabase
+      .channel('team-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'invitations' },
+        () => fetchTeamData()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.company_id]);
+  
+  const handleRemoveMember = async (memberId: string) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ company_id: null })
+        .eq('id', memberId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Team member removed",
+        description: "The team member has been removed from your company.",
+      });
+      
+      fetchTeamData();
+    } catch (error: any) {
+      toast({
+        title: "Failed to remove member",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+  
+  const handleCancelInvitation = async (invitationId: string) => {
+    try {
+      const { error } = await supabase
+        .from('invitations')
+        .delete()
+        .eq('id', invitationId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Invitation cancelled",
+        description: "The invitation has been cancelled.",
+      });
+      
+      fetchTeamData();
+    } catch (error: any) {
+      toast({
+        title: "Failed to cancel invitation",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
   
   const getInitials = (firstName: string, lastName: string) => {
@@ -121,7 +150,6 @@ const TeamMembers = () => {
           <div className="py-4 text-center text-gray-500">Loading...</div>
         ) : (
           <div className="space-y-6">
-            {/* Active Members */}
             <div>
               <h3 className="font-medium mb-2">Active Members ({members.length})</h3>
               <div className="space-y-2">
@@ -132,7 +160,7 @@ const TeamMembers = () => {
                         {member.profile_photo_url && (
                           <AvatarImage src={member.profile_photo_url} alt={`${member.first_name} ${member.last_name}`} />
                         )}
-                        <AvatarFallback>{getInitials(member.first_name, member.last_name)}</AvatarFallback>
+                        <AvatarFallback>{getInitials(member.first_name || '', member.last_name || '')}</AvatarFallback>
                       </Avatar>
                       <div>
                         <div className="font-medium">
@@ -143,7 +171,7 @@ const TeamMembers = () => {
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
-                      <Badge variant="outline">{member.role}</Badge>
+                      <Badge variant="outline">{member.role || 'Member'}</Badge>
                       
                       {member.id !== user?.id && (
                         <Dialog>
@@ -181,7 +209,6 @@ const TeamMembers = () => {
               </div>
             </div>
             
-            {/* Pending Invitations */}
             {invitations.length > 0 && (
               <div>
                 <h3 className="font-medium mb-2">Pending Invitations ({invitations.length})</h3>

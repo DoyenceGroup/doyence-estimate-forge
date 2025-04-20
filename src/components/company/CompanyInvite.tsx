@@ -53,19 +53,22 @@ const CompanyInvite = () => {
         throw new Error(`Invalid email format: ${invalidEmails.join(", ")}`);
       }
       
-      // In a real implementation, we would create a company if it doesn't exist
-      // and then create invitations for each email
-      const invitations = emailList.map(email => ({
-        email,
-        invited_by: user.id,
-        company_id: companyId || user.id, // Use user ID as company ID if no company exists yet
-        status: "pending",
-        created_at: new Date().toISOString()
-      }));
+      if (!companyId) {
+        throw new Error("No company ID found. Please set up your company first.");
+      }
+
+      // Create invitations in the database
+      const { error } = await supabase
+        .from('invitations')
+        .insert(
+          emailList.map(email => ({
+            company_id: companyId,
+            email: email,
+            created_by: user.id
+          }))
+        );
       
-      // For now, we'll just show a success message
-      // In a real implementation, we would insert these invitations into a database table
-      console.log("Invitations to be created:", invitations);
+      if (error) throw error;
       
       toast({
         title: "Invitations sent",

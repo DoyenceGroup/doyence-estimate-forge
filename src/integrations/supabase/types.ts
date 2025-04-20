@@ -115,6 +115,41 @@ export type Database = {
           },
         ]
       }
+      invitations: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          created_by: string
+          email: string
+          id: string
+          status: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          created_by: string
+          email: string
+          id?: string
+          status?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          created_by?: string
+          email?: string
+          id?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invitations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           company_address: string | null
