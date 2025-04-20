@@ -69,3 +69,21 @@ export interface TeamMember {
   role: string;
   profile_photo_url: string | null;
 }
+
+export interface CompanyMember {
+  id: string;
+  user_id: string;
+  company_id: string;
+  role: string;
+  joined_at: string;
+}
+
+export interface CompanyInvitation {
+  id: string;
+  email: string;
+  company_id: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  created_at: string;
+  expires_at?: string;
+  created_by: string;
+}
