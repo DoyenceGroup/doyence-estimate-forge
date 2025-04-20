@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -6,34 +7,59 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Palette } from "lucide-react";
 import ColorPicker from "@/components/ui/ColorPicker";
+import { supabase } from "@/integrations/supabase/client";
 
 const CompanyTheme = () => {
-  const [selectedId, setSelectedId] = useState("blue-500");
   const [customColor, setCustomColor] = useState("#3183ff");
-  const [isCustom, setIsCustom] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
-  const selectedThemeColor = isCustom
-    ? (customColor.startsWith("#") ? customColor : "#" + customColor)
-    : "#3b82f6";
+  // Load saved theme color on component mount
+  useEffect(() => {
+    const loadThemeSettings = async () => {
+      if (profile?.company_id) {
+        const { data, error } = await supabase
+          .from('companies')
+          .select('theme_color')
+          .eq('id', profile.company_id)
+          .maybeSingle();
+        
+        if (data?.theme_color) {
+          setCustomColor(data.theme_color);
+        }
+      }
+    };
+    
+    loadThemeSettings();
+  }, [profile]);
 
   const handleSaveTheme = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user?.id) {
+    if (!user?.id || !profile?.company_id) {
       toast({
         title: "Authentication error",
-        description: "You must be logged in to update the theme.",
+        description: "You must be logged in with a company to update the theme.",
         variant: "destructive",
       });
       return;
     }
     setIsLoading(true);
     try {
+      // Update company theme color
+      const { error } = await supabase
+        .from('companies')
+        .update({
+          theme_color: customColor,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", profile.company_id);
+      
+      if (error) throw error;
+      
       toast({
         title: "Theme updated",
-        description: `Your company theme color has been updated to ${isCustom ? customColor : selectedId}.`,
+        description: `Your company theme color has been updated to ${customColor}.`,
       });
     } catch (error: any) {
       toast({
@@ -46,13 +72,9 @@ const CompanyTheme = () => {
     }
   };
 
-  const handleSwatchClick = (id: string) => {
-    setSelectedId(id);
-    setIsCustom(false);
+  const handleColorChange = (color: string) => {
+    setCustomColor(color);
   };
-
-  const isValidHex = (input: string) =>
-    /^#?([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(input);
 
   return (
     <Card>
@@ -73,7 +95,7 @@ const CompanyTheme = () => {
               <p className="text-sm text-gray-500 mb-4">
                 Use the color picker to select your company brand color.
               </p>
-              <ColorPicker value={customColor} onChange={setCustomColor} />
+              <ColorPicker value={customColor} onChange={handleColorChange} />
               <div className="mt-2 text-xs">Current: <span style={{ color: customColor }}>{customColor}</span></div>
             </div>
             <div className="mt-6 pt-6 border-t">
@@ -84,11 +106,11 @@ const CompanyTheme = () => {
                     <h4 className="font-medium">Button Example</h4>
                     <div className="mt-2 flex space-x-2">
                       <Button
-                        style={{ backgroundColor: selectedThemeColor, color: "#fff", borderColor: "#fff" }}
+                        style={{ backgroundColor: customColor, color: "#fff", borderColor: "#fff" }}
                       >
                         Primary Button
                       </Button>
-                      <Button variant="outline" style={{ borderColor: selectedThemeColor, color: selectedThemeColor }}>
+                      <Button variant="outline" style={{ borderColor: customColor, color: customColor }}>
                         Outline
                       </Button>
                     </div>
@@ -98,12 +120,12 @@ const CompanyTheme = () => {
                     <div className="mt-2">
                       <span
                         className="font-medium"
-                        style={{ color: selectedThemeColor }}
+                        style={{ color: customColor }}
                       >
                         This text uses your primary color
                       </span>
                     </div>
-                    <div className="mt-2 p-2 rounded" style={{ backgroundColor: selectedThemeColor + '10' }}>
+                    <div className="mt-2 p-2 rounded" style={{ backgroundColor: customColor + '10' }}>
                       <span>Background tint example</span>
                     </div>
                   </div>

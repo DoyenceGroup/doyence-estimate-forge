@@ -37,6 +37,7 @@ const CompanyTab = () => {
         .maybeSingle()
         .then(({ data: company, error }) => {
           if (!company || error) return;
+          console.log("Loaded company data:", company);
           setCompanyName(company.name || "");
           setWebsite(company.website || "");
           setEmail(company.email || "");
@@ -61,6 +62,18 @@ const CompanyTab = () => {
     setIsLoading(true);
 
     try {
+      // First update the local profile's logo_url field
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          phone_number: phoneNumber,
+          logo_url: logoUrl,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", user.id);
+
+      if (profileError) throw profileError;
+
       // Update company in companies table
       const { error: companyError } = await supabase
         .from('companies')
@@ -76,21 +89,12 @@ const CompanyTab = () => {
 
       if (companyError) throw companyError;
 
-      // Update phone in user profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          phone_number: phoneNumber,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", user.id);
-
-      if (profileError) throw profileError;
-
       toast({
         title: "Company updated",
         description: "Your company information has been updated successfully.",
       });
+      
+      console.log("Saved company with logo URL:", logoUrl);
     } catch (error: any) {
       toast({
         title: "Update failed",
@@ -100,6 +104,12 @@ const CompanyTab = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Update logo handler with debug logging
+  const handleLogoChange = (logo: string | null) => {
+    console.log("Logo changed to:", logo);
+    setLogoUrl(logo);
   };
 
   return (
@@ -114,7 +124,7 @@ const CompanyTab = () => {
         <CardContent className="space-y-6">
           <div className="flex justify-center mb-4">
             <LogoUpload
-              onImageUpload={setLogoUrl}
+              onImageUpload={handleLogoChange}
               initialImage={logoUrl || undefined}
             />
           </div>
