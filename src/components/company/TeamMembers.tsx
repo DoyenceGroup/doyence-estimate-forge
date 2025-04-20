@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Users, UserX, User, UserCheck } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -64,7 +63,7 @@ const TeamMembers = () => {
             // Get profile data for this user_id
             const { data: profileData, error: profileError } = await supabase
               .from('profiles')
-              .select('first_name, last_name, email, profile_photo_url')
+              .select('first_name, last_name, phone_number, profile_photo_url, company_email')
               .eq('id', member.user_id)
               .single();
               
@@ -87,7 +86,7 @@ const TeamMembers = () => {
                 role: member.role,
                 first_name: profileData.first_name,
                 last_name: profileData.last_name,
-                email: profileData.email,
+                email: profileData.company_email,
                 profile_photo_url: profileData.profile_photo_url
               });
             }
