@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -24,13 +23,11 @@ const CompanyTab = () => {
   const { user, profile } = useAuth();
   const [companyId, setCompanyId] = useState<string | null>(null);
 
-  // Load company info, including logo, from companies table as the source of truth!
   useEffect(() => {
     if (profile?.company_id) {
       console.log("[CompanyTab] Loading company data. Profile:", profile);
       setCompanyId(profile.company_id);
 
-      // Fetch company details from companies table
       supabase
         .from("companies")
         .select("*")
@@ -60,10 +57,9 @@ const CompanyTab = () => {
           setWebsite(company.website || "");
           setEmail(company.email || "");
           setAddress(company.address || "");
-          setLogoUrl(company.logo_url || null); // use company logo as priority
+          setLogoUrl(company.logo_url || null);
         });
 
-      // Load phone from profile (not in companies)
       setPhoneNumber(profile.phone_number || "");
     }
   }, [profile]);
@@ -92,12 +88,11 @@ const CompanyTab = () => {
 
     try {
       console.log("[CompanyTab] Updating profile for user:", user.id);
-      // Update the local profile's logo_url and phone_number
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .update({
           phone_number: phoneNumber,
-          logo_url: logoUrl, // save logo to profile as well
+          logo_url: logoUrl,
           updated_at: new Date().toISOString()
         })
         .eq("id", user.id);
@@ -106,7 +101,6 @@ const CompanyTab = () => {
       if (profileError) throw profileError;
 
       console.log("[CompanyTab] Updating company:", companyId);
-      // Update company in companies table (including logo_url)
       const { data: companyData, error: companyError } = await supabase
         .from('companies')
         .update({
@@ -117,20 +111,21 @@ const CompanyTab = () => {
           logo_url: logoUrl,
           updated_at: new Date().toISOString()
         })
-        .eq("id", companyId);
+        .eq("id", companyId)
+        .select()
+        .maybeSingle();
 
       console.log("[CompanyTab] Company update result:", { companyData, companyError });
       if (companyError) throw companyError;
+
+      if (companyData?.logo_url && companyData.logo_url !== logoUrl) {
+        setLogoUrl(companyData.logo_url);
+      }
 
       toast({
         title: "Company updated",
         description: "Your company information has been updated successfully.",
       });
-      
-      console.log("[CompanyTab] Save completed successfully. Reloading in 400ms...");
-      // force reload after save (otherwise logo upload may not appear after save + revisit)
-      // (this workaround guarantees logo is fresh if navigating away/back)
-      setTimeout(() => window.location.reload(), 400);
 
     } catch (error: any) {
       console.error("[CompanyTab] Save failed:", error);
@@ -149,7 +144,6 @@ const CompanyTab = () => {
     setLogoUrl(logo);
   };
 
-  // Debug render to track state changes
   console.log("[CompanyTab] Render state:", { 
     companyId, 
     logoUrl: logoUrl ? `Found (length: ${logoUrl.length})` : "Not found"
