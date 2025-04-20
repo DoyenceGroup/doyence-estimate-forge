@@ -1,4 +1,3 @@
-
 import {
   createContext,
   useContext,
@@ -47,28 +46,50 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const getSession = async () => {
-      setIsLoading(true);
-      const {
-        data: { session },
-        error,
-      } = await supabase.auth.getSession();
-
-      if (error) {
-        console.error("Error getting session:", error);
-        toast({
-          variant: "destructive",
-          title: "Error fetching session",
-        });
-      }
-
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
-      setIsLoading(false);
+
+      if (!session) {
+        setProfile(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    const getSession = async () => {
+      setIsLoading(true);
+      try {
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession();
+
+        if (error) {
+          console.error("Error getting session:", error);
+          toast({
+            variant: "destructive",
+            title: "Error fetching session",
+          });
+        }
+
+        setSession(session);
+        setUser(session?.user ?? null);
+      } catch (err) {
+        console.error("Session fetch error:", err);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     getSession();
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -125,25 +146,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       fetchProfile();
     } else {
       setProfile(null);
+      setIsLoading(false);
     }
   }, [user, toast]);
-
-  useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-
-      if (!session) {
-        setProfile(null);
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [navigate]);
 
   const signInWithEmailAndPassword = async (email: string, password: string) => {
     try {

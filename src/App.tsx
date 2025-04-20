@@ -14,6 +14,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { CSSTransition, TransitionGroup } from "react-transition-group";
 import "./route-transitions.css"; // We'll define fade transition here
 
+// First define the components that need auth context
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const { session, isLoading } = useAuth();
 
@@ -99,18 +100,26 @@ const AnimatedRoutes = () => {
   );
 };
 
-function App() {
+// App wrapper with proper provider hierarchy
+function AppWithProviders() {
   useEffect(() => {
     const cleanup = initializeSessionTimeout();
     return () => cleanup();
   }, []);
 
   return (
+    <AuthProvider>
+      <AnimatedRoutes />
+      <Toaster />
+    </AuthProvider>
+  );
+}
+
+// Root component that gets mounted
+function App() {
+  return (
     <BrowserRouter>
-      <AuthProvider>
-        <AnimatedRoutes />
-        <Toaster />
-      </AuthProvider>
+      <AppWithProviders />
     </BrowserRouter>
   );
 }
