@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Users, UserX, User, UserCheck } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -42,20 +42,10 @@ const TeamMembers = () => {
         
         console.log("Using company ID:", companyId);
         
-        // Direct query to fetch company members and join with profiles
+        // First, get company members
         const { data: memberData, error: memberError } = await supabase
           .from('company_members')
-          .select(`
-            id,
-            user_id,
-            role,
-            profiles:user_id (
-              first_name,
-              last_name,
-              email,
-              profile_photo_url
-            )
-          `)
+          .select('id, user_id, role')
           .eq('company_id', companyId);
         
         if (memberError) {
@@ -63,19 +53,51 @@ const TeamMembers = () => {
           throw memberError;
         }
         
-        // Format the data to match the TeamMember type
-        const formattedMembers: TeamMember[] = memberData?.map(member => ({
-          id: member.id,
-          user_id: member.user_id,
-          role: member.role,
-          first_name: member.profiles?.first_name || null,
-          last_name: member.profiles?.last_name || null,
-          email: member.profiles?.email || null,
-          profile_photo_url: member.profiles?.profile_photo_url || null
-        })) || [];
+        if (!memberData) {
+          console.log("No member data returned");
+          setMembers([]);
+        } else {
+          // Now fetch profile data for each member
+          const formattedMembers: TeamMember[] = [];
+          
+          for (const member of memberData) {
+            // Get profile data for this user_id
+            const { data: profileData, error: profileError } = await supabase
+              .from('profiles')
+              .select('first_name, last_name, email, profile_photo_url')
+              .eq('id', member.user_id)
+              .single();
+              
+            if (profileError) {
+              console.error(`Error fetching profile for user ${member.user_id}:`, profileError);
+              // Still add the member with available data
+              formattedMembers.push({
+                id: member.id,
+                user_id: member.user_id,
+                role: member.role,
+                first_name: null,
+                last_name: null,
+                email: null,
+                profile_photo_url: null
+              });
+            } else if (profileData) {
+              formattedMembers.push({
+                id: member.id,
+                user_id: member.user_id,
+                role: member.role,
+                first_name: profileData.first_name,
+                last_name: profileData.last_name,
+                email: profileData.email,
+                profile_photo_url: profileData.profile_photo_url
+              });
+            }
+          }
+          
+          setMembers(formattedMembers);
+        }
         
         // Check if current user is in the list, add if not
-        if (user && !formattedMembers.some(m => m.user_id === user.id)) {
+        if (user && !members.some(m => m.user_id === user.id)) {
           // Add current user directly to company_members table
           const { data: insertData, error: insertError } = await supabase
             .from('company_members')
@@ -92,16 +114,21 @@ const TeamMembers = () => {
           } else {
             console.log("Current user added to company members or already exists");
             
-            // Add current user to the local members list
-            formattedMembers.push({
-              id: insertData?.id || `temp-${user.id}`,
-              user_id: user.id,
-              role: 'admin',
-              first_name: profile.first_name,
-              last_name: profile.last_name,
-              email: profile.email,
-              profile_photo_url: profile.profile_photo_url
-            });
+            // Add current user to the local members list if not already there
+            if (!members.some(m => m.user_id === user.id)) {
+              setMembers(prevMembers => [
+                ...prevMembers,
+                {
+                  id: insertData?.id || `temp-${user.id}`,
+                  user_id: user.id,
+                  role: 'admin',
+                  first_name: profile.first_name,
+                  last_name: profile.last_name,
+                  email: profile.email,
+                  profile_photo_url: profile.profile_photo_url
+                }
+              ]);
+            }
           }
         }
 
@@ -116,14 +143,15 @@ const TeamMembers = () => {
           throw invitationsError;
         }
 
-        setMembers(formattedMembers);
         // Type casting to ensure compatibility with CompanyInvitation[]
-        setInvitations(invitationsData?.map(inv => ({
+        const typedInvitations = (invitationsData || []).map(inv => ({
           ...inv,
           status: (inv.status || 'pending') as 'pending' | 'accepted' | 'rejected'
-        })) || []);
+        }));
+
+        setInvitations(typedInvitations);
         setNoCompany(false);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error fetching team data:", error);
         toast({
           title: "Error fetching team data",

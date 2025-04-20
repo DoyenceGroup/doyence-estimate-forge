@@ -37,7 +37,7 @@ export interface UserProfile {
   profile_photo_url: string | null;
   company_role: string | null;
   role: string | null;
-  profile_completed: boolean;
+  profile_completed: boolean | null;
   company_id: string | null;
   company_name: string | null;
   company_email: string | null;

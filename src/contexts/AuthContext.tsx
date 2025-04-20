@@ -7,26 +7,8 @@ import {
 } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-
-type UserProfile = {
-  id: string;
-  user_id: string;
-  email: string | null;
-  first_name: string | null;
-  last_name: string | null;
-  phone_number: string | null;
-  profile_photo_url: string | null;
-  company_role: string | null;
-  role: string | null;
-  profile_completed: boolean;
-  company_id: string | null;
-  company_name: string | null;
-  company_email: string | null;
-  company_address: string | null;
-  logo_url: string | null;
-  website: string | null;
-};
+import { supabase } from "@/lib/supabase";
+import { UserProfile } from "@/lib/types";
 
 type AuthContextType = {
   session: any;
@@ -110,7 +92,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           });
         } else {
           console.log("Profile data fetched:", data);
-          setProfile(data);
+          const profileData: UserProfile = {
+            id: data.id,
+            user_id: data.id,
+            email: data.company_email,
+            first_name: data.first_name,
+            last_name: data.last_name,
+            phone_number: data.phone_number,
+            profile_photo_url: data.profile_photo_url,
+            company_role: data.company_role,
+            role: data.role,
+            profile_completed: data.profile_completed,
+            company_id: data.company_id,
+            company_name: data.company_name,
+            company_email: data.company_email,
+            company_address: data.company_address,
+            logo_url: data.logo_url,
+            website: data.website
+          };
+          setProfile(profileData);
         }
       } catch (err) {
         console.error("Error in profile fetch:", err);
@@ -124,7 +124,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } else {
       setProfile(null);
     }
-  }, [user]);
+  }, [user, toast]);
 
   useEffect(() => {
     const {
