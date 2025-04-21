@@ -8,6 +8,15 @@ import Navbar from "@/components/layout/Navbar";
 import AppSidebar from "@/components/app-sidebar";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { supabase } from "@/integrations/supabase/client";
+import { formatDistanceToNow } from "date-fns";
+
+interface ActivityLog {
+  id: string;
+  action: string;
+  project_name: string | null;
+  customer_name: string | null;
+  created_at: string;
+}
 
 const Dashboard = () => {
   const [_, setRerender] = useState({});
@@ -19,13 +28,8 @@ const Dashboard = () => {
     { name: "Pending Invoices", value: "0", icon: FileSpreadsheet, color: "text-amber-500", path: "/invoices" },
     { name: "Recent Projects", value: "0", icon: Wrench, color: "text-purple-500", path: "/projects" },
   ]);
-
-  const recentActivity = [
-    { id: 1, action: "Estimate created", project: "Kitchen Renovation", customer: "John Smith", time: "2 hours ago" },
-    { id: 2, action: "Customer added", project: "", customer: "Sarah Johnson", time: "Yesterday" },
-    { id: 3, action: "Estimate approved", project: "Bathroom Remodel", customer: "Mike Davis", time: "3 days ago" },
-    { id: 4, action: "Invoice sent", project: "Deck Construction", customer: "Emily Wilson", time: "1 week ago" },
-  ];
+  const [recentActivity, setRecentActivity] = useState<ActivityLog[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Fetch stats from Supabase
   useEffect(() => {
@@ -58,6 +62,34 @@ const Dashboard = () => {
     };
 
     fetchStats();
+  }, [user?.id]);
+
+  // Fetch recent activity
+  useEffect(() => {
+    const fetchActivity = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('activity_logs')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        if (error) {
+          console.error('Error fetching activity:', error);
+          return;
+        }
+
+        setRecentActivity(data || []);
+      } catch (error) {
+        console.error('Error fetching activity:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (user?.id) {
+      fetchActivity();
+    }
   }, [user?.id]);
 
   return (
@@ -104,29 +136,37 @@ const Dashboard = () => {
                   <CardDescription>Your latest actions and updates</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ul className="divide-y divide-gray-200">
-                    {recentActivity.map((item) => (
-                      <li key={item.id} className="py-3">
-                        <div className="flex items-start">
-                          <div className="mr-2 mt-0.5">
-                            <Clock className="h-4 w-4 text-gray-400" />
+                  {isLoading ? (
+                    <div className="py-4 text-center text-gray-500">Loading activity...</div>
+                  ) : recentActivity.length === 0 ? (
+                    <div className="py-4 text-center text-gray-500">No recent activity</div>
+                  ) : (
+                    <ul className="divide-y divide-gray-200">
+                      {recentActivity.map((item) => (
+                        <li key={item.id} className="py-3">
+                          <div className="flex items-start">
+                            <div className="mr-2 mt-0.5">
+                              <Clock className="h-4 w-4 text-gray-400" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900">
+                                {item.action}
+                                {item.project_name && <span> - {item.project_name}</span>}
+                              </p>
+                              {item.customer_name && (
+                                <p className="text-sm text-gray-500">
+                                  {item.customer_name}
+                                </p>
+                              )}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900">
-                              {item.action}
-                              {item.project && <span> - {item.project}</span>}
-                            </p>
-                            <p className="text-sm text-gray-500">
-                              {item.customer}
-                            </p>
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {item.time}
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </CardContent>
               </Card>
             </div>
