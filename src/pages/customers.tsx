@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, ArrowLeft, Trash2, Search, ArrowDown, ArrowUp, Filter } from "lucide-react";
+import { Plus, Edit, ArrowLeft, Trash2, Search, ArrowDown, ArrowUp, Filter, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { CustomerForm } from "@/components/customers/CustomerForm";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -18,6 +18,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type Customer = {
   id: string;
@@ -40,12 +41,17 @@ const sortOptions = [
 ];
 
 const leadSourceOptions = [
-  { value: "all", label: "All" },
   { value: "Referral", label: "Referral" },
   { value: "Website", label: "Website" },
-  { value: "Social Media", label: "Social Media" },
+  { value: "Facebook", label: "Facebook" },
+  { value: "Instagram", label: "Instagram" },
+  { value: "LinkedIn", label: "LinkedIn" },
+  { value: "Social Media", label: "Social Media (Other)" },
+  { value: "Google", label: "Google" },
   { value: "Other", label: "Other" },
 ];
+
+const socialMediaSources = ["Facebook", "Instagram", "LinkedIn", "Social Media"];
 
 const Customers = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -62,7 +68,7 @@ const Customers = () => {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("created_at");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  const [filterLeadSource, setFilterLeadSource] = useState("all");
+  const [selectedLeadSources, setSelectedLeadSources] = useState<string[]>([]);
   const [filterDateAdded, setFilterDateAdded] = useState<[Date | undefined, Date | undefined]>([undefined, undefined]);
   const [filterDateModified, setFilterDateModified] = useState<[Date | undefined, Date | undefined]>([undefined, undefined]);
   const [showFilter, setShowFilter] = useState(false);
@@ -143,40 +149,64 @@ const Customers = () => {
     setActiveTab("info");
   };
 
+  const toggleLeadSourceFilter = (source: string) => {
+    setSelectedLeadSources(prev => {
+      if (prev.includes(source)) {
+        return prev.filter(s => s !== source);
+      } else {
+        return [...prev, source];
+      }
+    });
+  };
+
+  const resetFilters = () => {
+    setSelectedLeadSources([]);
+    setFilterDateAdded([undefined, undefined]);
+    setFilterDateModified([undefined, undefined]);
+  };
+
+  const hasActiveFilters = selectedLeadSources.length > 0 || 
+    filterDateAdded[0] !== undefined || 
+    filterDateAdded[1] !== undefined || 
+    filterDateModified[0] !== undefined || 
+    filterDateModified[1] !== undefined;
+
   const filteredSortedCustomers = useMemo(() => {
     return customers
       .filter((customer) => {
-        if (filterLeadSource && filterLeadSource !== "all" && customer.lead_source !== filterLeadSource) return false;
+        if (selectedLeadSources.length > 0) {
+          const customerSource = customer.lead_source || "";
+          if (selectedLeadSources.includes("Social Media")) {
+            if (socialMediaSources.includes(customerSource)) {
+              return true;
+            }
+          }
+          if (!selectedLeadSources.includes(customerSource)) {
+            return false;
+          }
+        }
         
-        if (
-          filterDateAdded[0] &&
-          new Date(customer.created_at).getTime() < new Date(filterDateAdded[0]).getTime()
-        )
+        if (filterDateAdded[0] && new Date(customer.created_at).getTime() < new Date(filterDateAdded[0]).getTime()) {
           return false;
-        if (
-          filterDateAdded[1] &&
-          new Date(customer.created_at).getTime() > new Date(filterDateAdded[1]).getTime() + 86400000
-        )
+        }
+        if (filterDateAdded[1] && new Date(customer.created_at).getTime() > new Date(filterDateAdded[1]).getTime() + 86400000) {
           return false;
+        }
         
-        if (
-          filterDateModified[0] &&
-          new Date(customer.updated_at).getTime() < new Date(filterDateModified[0]).getTime()
-        )
+        if (filterDateModified[0] && new Date(customer.updated_at).getTime() < new Date(filterDateModified[0]).getTime()) {
           return false;
-        if (
-          filterDateModified[1] &&
-          new Date(customer.updated_at).getTime() > new Date(filterDateModified[1]).getTime() + 86400000
-        )
+        }
+        if (filterDateModified[1] && new Date(customer.updated_at).getTime() > new Date(filterDateModified[1]).getTime() + 86400000) {
           return false;
+        }
         
         const searchLower = search.toLowerCase();
         return (
           !search ||
-          customer.name.toLowerCase().includes(searchLower) ||
-          customer.last_name.toLowerCase().includes(searchLower) ||
-          (customer.emails && customer.emails.some((e) => e?.toLowerCase().includes(searchLower))) ||
-          (customer.cell_numbers && customer.cell_numbers.some((n) => n?.toLowerCase().includes(searchLower)))
+          customer.name?.toLowerCase().includes(searchLower) ||
+          customer.last_name?.toLowerCase().includes(searchLower) ||
+          (customer.emails && customer.emails.some(e => e?.toLowerCase().includes(searchLower))) ||
+          (customer.cell_numbers && customer.cell_numbers.some(n => n?.toLowerCase().includes(searchLower)))
         );
       })
       .sort((a, b) => {
@@ -208,7 +238,7 @@ const Customers = () => {
     search,
     sortBy,
     sortDir,
-    filterLeadSource,
+    selectedLeadSources,
     filterDateAdded,
     filterDateModified,
   ]);
@@ -278,25 +308,34 @@ const Customers = () => {
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" size="sm" className="ml-2">
-                    <Filter className="w-4 h-4 mr-2" /> Filters
+                    <Filter className="w-4 h-4 mr-2" /> 
+                    Filters
+                    {hasActiveFilters && (
+                      <span className="ml-1 rounded-full bg-primary w-2 h-2"></span>
+                    )}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent align="start" className="w-80 bg-background">
                   <div className="flex flex-col gap-4">
                     <div>
-                      <label className="block text-xs mb-1 text-muted-foreground">Lead Source</label>
-                      <Select value={filterLeadSource} onValueChange={v => setFilterLeadSource(v)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Lead source" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {leadSourceOptions.map(opt => (
-                            <SelectItem value={opt.value} key={opt.value}>
-                              {opt.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <h4 className="font-medium mb-2">Lead Sources</h4>
+                      <div className="space-y-2 max-h-40 overflow-y-auto">
+                        {leadSourceOptions.map(option => (
+                          <div key={option.value} className="flex items-center space-x-2">
+                            <Checkbox 
+                              id={`lead-source-${option.value}`} 
+                              checked={selectedLeadSources.includes(option.value)}
+                              onCheckedChange={() => toggleLeadSourceFilter(option.value)}
+                            />
+                            <label 
+                              htmlFor={`lead-source-${option.value}`}
+                              className="text-sm cursor-pointer"
+                            >
+                              {option.label}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                     <div>
                       <label className="block text-xs mb-1 text-muted-foreground">Date Added</label>
@@ -350,23 +389,20 @@ const Customers = () => {
                         </PopoverContent>
                       </Popover>
                     </div>
+                    {hasActiveFilters && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={resetFilters}
+                        className="mt-2"
+                      >
+                        <X className="w-4 h-4 mr-2" />
+                        Clear All Filters
+                      </Button>
+                    )}
                   </div>
                 </PopoverContent>
               </Popover>
-              {(filterLeadSource !== "all" || filterDateAdded[0] || filterDateAdded[1] || filterDateModified[0] || filterDateModified[1]) && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="ml-1"
-                  onClick={() => {
-                    setFilterLeadSource("all");
-                    setFilterDateAdded([undefined, undefined]);
-                    setFilterDateModified([undefined, undefined]);
-                  }}
-                >
-                  Clear Filters
-                </Button>
-              )}
             </div>
           </div>
           
