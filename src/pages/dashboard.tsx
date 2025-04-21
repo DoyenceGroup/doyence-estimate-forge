@@ -58,7 +58,7 @@ const Dashboard = () => {
           )
         );
 
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching stats:', error);
         toast({
           title: "Error fetching stats",
