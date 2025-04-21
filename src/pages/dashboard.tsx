@@ -8,6 +8,7 @@ import Navbar from "@/components/layout/Navbar";
 import AppSidebar from "@/components/app-sidebar";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/components/ui/use-toast";
 
 const Dashboard = () => {
   const [_, setRerender] = useState({});
@@ -40,6 +41,11 @@ const Dashboard = () => {
 
         if (customerError) {
           console.error('Error fetching customer count:', customerError);
+          toast({
+            title: "Error fetching customer count",
+            description: customerError.message,
+            variant: "destructive",
+          });
           return;
         }
 
@@ -54,11 +60,21 @@ const Dashboard = () => {
 
       } catch (error) {
         console.error('Error fetching stats:', error);
+        toast({
+          title: "Error fetching stats",
+          description: "Could not retrieve customer statistics",
+          variant: "destructive",
+        });
       }
     };
 
     fetchStats();
   }, [user?.id]);
+
+  const handleCardClick = (path: string) => {
+    console.log("Navigating to:", path);
+    navigate(path);
+  };
 
   return (
     <SidebarProvider>
@@ -83,7 +99,7 @@ const Dashboard = () => {
                   <Card 
                     key={stat.name}
                     className="cursor-pointer transition-all hover:shadow-md"
-                    onClick={() => navigate(stat.path)}
+                    onClick={() => handleCardClick(stat.path)}
                   >
                     <CardContent className="flex items-center p-6">
                       <div className="p-2 rounded-full bg-gray-100 mr-4">
