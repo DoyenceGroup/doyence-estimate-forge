@@ -67,12 +67,14 @@ const Dashboard = () => {
   // Fetch recent activity
   useEffect(() => {
     const fetchActivity = async () => {
+      if (!user?.id) return;
+      
       try {
         const { data, error } = await supabase
           .from('activity_logs')
           .select('*')
           .order('created_at', { ascending: false })
-          .limit(5);
+          .limit(10);
 
         if (error) {
           console.error('Error fetching activity:', error);
@@ -87,9 +89,30 @@ const Dashboard = () => {
       }
     };
 
-    if (user?.id) {
-      fetchActivity();
-    }
+    fetchActivity();
+
+    // Set up real-time subscription for new activity
+    const channel = supabase
+      .channel('activity_logs_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'activity_logs'
+        },
+        (payload) => {
+          setRecentActivity(currentActivity => {
+            const newActivity = [payload.new as ActivityLog, ...currentActivity];
+            return newActivity.slice(0, 10); // Keep only the 10 most recent
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user?.id]);
 
   return (
