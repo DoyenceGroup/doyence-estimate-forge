@@ -1,4 +1,3 @@
-
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -13,14 +12,19 @@ import Index from "@/pages/Index";
 import Settings from "@/pages/company/Settings";
 import { Toaster } from "@/components/ui/toaster";
 import { CSSTransition, TransitionGroup } from "react-transition-group";
-import "./route-transitions.css"; // We'll define fade transition here
+import "./route-transitions.css";
 
 // First define the components that need auth context
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const { session, isLoading } = useAuth();
 
   if (isLoading) {
-    return <div className="p-8">Loading...</div>;
+    return <div className="p-8 flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+        <span>Loading...</span>
+      </div>
+    </div>;
   }
 
   return session ? children : <Navigate to="/login" />;
@@ -44,13 +48,19 @@ const UnauthenticatedOnlyRoute = ({ children }: { children: JSX.Element }) => {
   return children;
 };
 
-// Animated routes wrapper
+// Improved AnimatedRoutes with key that won't change on tab switches
 const AnimatedRoutes = () => {
   const location = useLocation();
 
   return (
     <TransitionGroup>
-      <CSSTransition key={location.key} classNames="route-fade" timeout={300}>
+      <CSSTransition 
+        key={location.pathname} 
+        classNames="route-fade" 
+        timeout={300}
+        mountOnEnter
+        unmountOnExit
+      >
         <Routes location={location}>
           <Route
             path="/dashboard"
@@ -101,11 +111,11 @@ const AnimatedRoutes = () => {
   );
 };
 
-// App wrapper with proper provider hierarchy
+// App wrapper with proper provider hierarchy and improved session timeout
 function AppWithProviders() {
   useEffect(() => {
     const cleanup = initializeSessionTimeout();
-    return () => cleanup();
+    return cleanup;
   }, []);
 
   return (

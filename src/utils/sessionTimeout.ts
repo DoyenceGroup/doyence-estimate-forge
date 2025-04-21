@@ -9,43 +9,40 @@ let lastActivity = Date.now();
 let isWindowFocused = true;
 
 const resetTimer = () => {
-  // Only reset the timer if we're in focus to prevent unnecessary reloads
-  if (isWindowFocused) {
-    clearTimeout(inactivityTimer);
-    lastActivity = Date.now();
-    
-    inactivityTimer = setTimeout(async () => {
-      const timeSinceLastActivity = Date.now() - lastActivity;
-      if (timeSinceLastActivity >= INACTIVITY_TIMEOUT) {
-        await supabase.auth.signOut();
-      }
-    }, INACTIVITY_TIMEOUT);
-  }
+  clearTimeout(inactivityTimer);
+  lastActivity = Date.now();
+  
+  inactivityTimer = setTimeout(async () => {
+    const timeSinceLastActivity = Date.now() - lastActivity;
+    if (timeSinceLastActivity >= INACTIVITY_TIMEOUT) {
+      await supabase.auth.signOut();
+    }
+  }, INACTIVITY_TIMEOUT);
 };
 
 export const initializeSessionTimeout = () => {
-  // Track window focus/blur events
+  // Only update focus state without resetting timer
   window.addEventListener('focus', () => {
     isWindowFocused = true;
-    resetTimer(); // Reset timer when window gets focus
   });
   
   window.addEventListener('blur', () => {
     isWindowFocused = false;
   });
   
-  // Reset timer on user activity, but only when the window is in focus
+  // Reset timer on user activity, but without tying it to window focus
   ['mousedown', 'keydown', 'touchstart', 'scroll'].forEach(event => {
     window.addEventListener(event, resetTimer);
   });
   
+  // Initialize timer
   resetTimer();
   
   return () => {
     ['mousedown', 'keydown', 'touchstart', 'scroll'].forEach(event => {
       window.removeEventListener(event, resetTimer);
     });
-    window.removeEventListener('focus', resetTimer);
+    window.removeEventListener('focus', () => { isWindowFocused = true; });
     window.removeEventListener('blur', () => { isWindowFocused = false; });
     clearTimeout(inactivityTimer);
   };
