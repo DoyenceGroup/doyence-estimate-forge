@@ -1,12 +1,27 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Form, FormItem, FormLabel, FormControl, FormMessage, FormDescription, FormField } from "@/components/ui/form";
+import {
+  Form,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+  FormDescription,
+  FormField,
+} from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 
 type CustomerFormProps = {
   customer?: any;
@@ -21,26 +36,55 @@ type CustomerFormType = {
   emails: { value: string }[];
   address: string;
   lead_source: string;
+  lead_source_description?: string;
 };
 
-export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) {
+const LEAD_SOURCES = [
+  "Word of Mouth",
+  "Website",
+  "LocalPros",
+  "Bark",
+  "Facebook",
+  "Instagram",
+  "LinkedIn",
+  "Car Branding",
+  "House Branding",
+  "Youtube",
+  "Other",
+];
+
+export function CustomerForm({
+  customer,
+  onSave,
+  onCancel,
+}: CustomerFormProps) {
+  const [leadSource, setLeadSource] = useState(
+    customer?.lead_source || ""
+  );
+
   const form = useForm<CustomerFormType>({
     defaultValues: customer
       ? {
           name: customer.name,
           last_name: customer.last_name,
-          cell_numbers: customer.cell_numbers?.map((n: string) => ({ value: n })) || [{ value: "" }, { value: "" }, { value: "" }],
-          emails: customer.emails?.map((e: string) => ({ value: e })) || [{ value: "" }, { value: "" }],
+          cell_numbers:
+            customer.cell_numbers?.map((n: string) => ({ value: n })) ||
+            [{ value: "" }],
+          emails:
+            customer.emails?.map((e: string) => ({ value: e })) ||
+            [{ value: "" }],
           address: customer.address || "",
           lead_source: customer.lead_source || "",
+          lead_source_description: customer.lead_source_description || "",
         }
       : {
           name: "",
           last_name: "",
-          cell_numbers: [{ value: "" }, { value: "" }, { value: "" }],
-          emails: [{ value: "" }, { value: "" }],
+          cell_numbers: [{ value: "" }],
+          emails: [{ value: "" }],
           address: "",
           lead_source: "",
+          lead_source_description: "",
         },
   });
 
@@ -50,6 +94,8 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
     register,
     formState: { errors, isSubmitting },
     reset,
+    setValue,
+    watch,
   } = form;
 
   const {
@@ -63,6 +109,8 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
     remove: removeEmail,
   } = useFieldArray({ name: "emails", control });
 
+  const watchedLeadSource = watch("lead_source");
+
   async function onSubmit(values: CustomerFormType) {
     const newCustomer = {
       name: values.name,
@@ -71,6 +119,10 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
       emails: values.emails.map((e) => e.value).filter(Boolean),
       address: values.address,
       lead_source: values.lead_source,
+      lead_source_description:
+        values.lead_source === "Other"
+          ? values.lead_source_description
+          : null,
     };
     let result;
     if (customer) {
@@ -82,12 +134,10 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
         })
         .eq("id", customer.id);
     } else {
-      result = await supabase
-        .from("customers")
-        .insert({
-          ...newCustomer,
-          created_by: (await supabase.auth.getUser()).data.user?.id,
-        });
+      result = await supabase.from("customers").insert({
+        ...newCustomer,
+        created_by: (await supabase.auth.getUser()).data.user?.id,
+      });
     }
     onSave();
     reset();
@@ -106,7 +156,7 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
                 <FormControl>
                   <Input {...field} />
                 </FormControl>
-                <FormMessage>{errors.name?.message}</FormMessage>
+                <FormMessage />
               </FormItem>
             )}
             rules={{ required: "Name is required" }}
@@ -120,77 +170,119 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
                 <FormControl>
                   <Input {...field} />
                 </FormControl>
-                <FormMessage>{errors.last_name?.message}</FormMessage>
+                <FormMessage />
               </FormItem>
             )}
             rules={{ required: "Last name is required" }}
           />
         </div>
-        
+
         <FormItem className="mb-2">
           <FormLabel>Cell Numbers</FormLabel>
-          <FormDescription>Add up to 5 numbers. At least 3 required.</FormDescription>
+          <FormDescription>
+            Add up to 5 numbers. At least 1 required.
+          </FormDescription>
           <div className="space-y-2 flex flex-col">
             {cellFields.map((field, idx) => (
               <div className="flex items-center gap-2" key={field.id}>
                 <Input
                   {...register(`cell_numbers.${idx}.value`, {
-                    required: idx < 3 ? "At least 3 numbers required" : false,
-                    pattern: { value: /^[\d+\s()-]{6,}$/, message: "Invalid number" },
+                    required:
+                      idx === 0
+                        ? "At least 1 number required"
+                        : false,
+                    pattern: {
+                      value: /^[\d+\s()-]{6,}$/,
+                      message: "Invalid number",
+                    },
                   })}
                   placeholder={`Number ${idx + 1}`}
                   type="tel"
                 />
-                {cellFields.length > 3 && (
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeCell(idx)} aria-label="Remove number">
+                {cellFields.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeCell(idx)}
+                    aria-label="Remove number"
+                  >
                     <Trash className="w-4 h-4" />
                   </Button>
                 )}
               </div>
             ))}
             {cellFields.length < 5 && (
-              <Button type="button" variant="secondary" onClick={() => appendCell({ value: "" })}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => appendCell({ value: "" })}
+              >
                 <Plus className="w-4 h-4" /> Add Number
               </Button>
             )}
           </div>
           <FormMessage>
-            {errors.cell_numbers && errors.cell_numbers[0]?.value?.message}
+            {
+              // Show the first error message for cell_numbers
+              errors.cell_numbers?.[0]?.value?.message as string
+            }
           </FormMessage>
         </FormItem>
-        
+
         <FormItem>
           <FormLabel>Emails</FormLabel>
-          <FormDescription>Add up to 4 emails. At least 2 required.</FormDescription>
+          <FormDescription>
+            Add up to 4 emails. At least 1 required.
+          </FormDescription>
           <div className="space-y-2 flex flex-col">
             {emailFields.map((field, idx) => (
               <div className="flex items-center gap-2" key={field.id}>
                 <Input
                   {...register(`emails.${idx}.value`, {
-                    required: idx < 2 ? "At least 2 emails required" : false,
-                    pattern: { value: /^\S+@\S+\.\S+$/, message: "Invalid email" },
+                    required:
+                      idx === 0
+                        ? "At least 1 email required"
+                        : false,
+                    pattern: {
+                      value: /^\S+@\S+\.\S+$/,
+                      message: "Invalid email",
+                    },
                   })}
                   placeholder={`Email ${idx + 1}`}
                   type="email"
                 />
-                {emailFields.length > 2 && (
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeEmail(idx)} aria-label="Remove email">
+                {emailFields.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeEmail(idx)}
+                    aria-label="Remove email"
+                  >
                     <Trash className="w-4 h-4" />
                   </Button>
                 )}
               </div>
             ))}
             {emailFields.length < 4 && (
-              <Button type="button" variant="secondary" onClick={() => appendEmail({ value: "" })}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => appendEmail({ value: "" })}
+              >
                 <Plus className="w-4 h-4" /> Add Email
               </Button>
             )}
           </div>
           <FormMessage>
-            {errors.emails && errors.emails[0]?.value?.message}
+            {
+              // Show the first error message for emails
+              errors.emails?.[0]?.value?.message as string
+            }
           </FormMessage>
         </FormItem>
-        
+
         <FormField
           control={control}
           name="address"
@@ -203,7 +295,8 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
             </FormItem>
           )}
         />
-        
+
+        {/* LEAD SOURCE DROPDOWN */}
         <FormField
           control={control}
           name="lead_source"
@@ -211,12 +304,62 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
             <FormItem>
               <FormLabel>Lead Source</FormLabel>
               <FormControl>
-                <Input {...field} placeholder="Lead source" />
+                <Select
+                  value={field.value}
+                  onValueChange={(val) => {
+                    setValue("lead_source", val);
+                    setLeadSource(val);
+                    if (val !== "Other") {
+                      setValue("lead_source_description", "");
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder="Select lead source..."
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LEAD_SOURCES.map((src) => (
+                      <SelectItem value={src} key={src}>
+                        {src}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </FormControl>
             </FormItem>
           )}
         />
-        
+
+        {/* Description for "Other" */}
+        {watchedLeadSource === "Other" && (
+          <FormField
+            control={control}
+            name="lead_source_description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Please specify other lead source
+                </FormLabel>
+                <FormControl>
+                  <Textarea
+                    {...field}
+                    placeholder="Describe lead source"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+            rules={{
+              required:
+                watchedLeadSource === "Other"
+                  ? "Please describe the lead source"
+                  : false,
+            }}
+          />
+        )}
+
         <div className="flex justify-between mt-6">
           <Button variant="outline" type="button" onClick={onCancel}>
             Cancel
