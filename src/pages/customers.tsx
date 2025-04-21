@@ -102,10 +102,9 @@ const Customers = () => {
         description: "Customer has been deleted successfully",
       });
       
-      if (viewMode === 'detail' && selectedCustomer?.id === customerId) {
-        setViewMode('list');
-        setSelectedCustomer(null);
-      }
+      // Always return to list view after deletion, regardless of current view
+      setViewMode('list');
+      setSelectedCustomer(null);
       
       fetchCustomers();
     } catch (error) {
@@ -124,7 +123,12 @@ const Customers = () => {
       {viewMode === 'list' ? (
         <>
           <div className="flex justify-between mb-6 items-center">
-            <h1 className="text-2xl font-bold">Customers</h1>
+            <div className="flex items-center">
+              <Button variant="ghost" onClick={() => navigate('/dashboard')} className="mr-2">
+                <ArrowLeft className="w-4 h-4 mr-2" /> Back to Dashboard
+              </Button>
+              <h1 className="text-2xl font-bold">Customers</h1>
+            </div>
             <Button onClick={() => { setOpen(true); setEditing(null); }}>
               <Plus className="w-4 h-4 mr-2" />
               New Customer
