@@ -58,12 +58,16 @@ export default function PaintColorPicker({ value, onChange }: PaintColorPickerPr
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Create a gradient (Hue left-right)
+    // Create a gradient (Hue left-right) with vivid color stops
     const w = canvas.width, h = canvas.height;
     const gradH = ctx.createLinearGradient(0, 0, w, 0);
-    for (let i = 0; i <= 360; i += 60) {
-      gradH.addColorStop(i / 360, `hsl(${i}, 100%, 50%)`);
-    }
+    gradH.addColorStop(0 / 6, "#ef4444");  // vivid red
+    gradH.addColorStop(1 / 6, "#f97316");  // bright orange
+    gradH.addColorStop(2 / 6, "#22c55e");  // bright green
+    gradH.addColorStop(3 / 6, "#0ea5e9");  // ocean blue
+    gradH.addColorStop(4 / 6, "#8B5CF6");  // vivid purple
+    gradH.addColorStop(5 / 6, "#db2777");  // magenta pink
+    gradH.addColorStop(6 / 6, "#ef4444");  // loop back to vivid red
     ctx.fillStyle = gradH;
     ctx.fillRect(0, 0, w, h);
 
