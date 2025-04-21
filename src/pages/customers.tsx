@@ -1,8 +1,8 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, ArrowLeft, Trash2 } from "lucide-react";
+import { Plus, Edit, ArrowLeft, Trash2, Search, ArrowDown, ArrowUp, Filter } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { CustomerForm } from "@/components/customers/CustomerForm";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,6 +13,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
 import CustomerNotes from "@/components/customers/CustomerNotes";
 import CustomerProjects from "@/components/customers/CustomerProjects";
+import { Input } from "@/components/ui/input";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 type Customer = {
   id: string;
@@ -23,7 +29,24 @@ type Customer = {
   emails: string[];
   lead_source: string;
   lead_source_description?: string;
+  created_at: string;
+  updated_at: string;
 };
+
+const sortOptions = [
+  { value: "name", label: "First Name" },
+  { value: "last_name", label: "Last Name" },
+  { value: "created_at", label: "Date Added" },
+  { value: "updated_at", label: "Last Modified" },
+];
+
+const leadSourceOptions = [
+  { value: "", label: "All" },
+  { value: "Referral", label: "Referral" },
+  { value: "Website", label: "Website" },
+  { value: "Social Media", label: "Social Media" },
+  { value: "Other", label: "Other" },
+];
 
 const Customers = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -36,6 +59,15 @@ const Customers = () => {
   const { toast } = useToast();
   const { session } = useAuth();
   const navigate = useNavigate();
+
+  // Search, sort, and filter states
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("created_at");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [filterLeadSource, setFilterLeadSource] = useState("");
+  const [filterDateAdded, setFilterDateAdded] = useState<[Date | undefined, Date | undefined]>([undefined, undefined]);
+  const [filterDateModified, setFilterDateModified] = useState<[Date | undefined, Date | undefined]>([undefined, undefined]);
+  const [showFilter, setShowFilter] = useState(false);
 
   async function fetchCustomers() {
     try {
@@ -56,8 +88,6 @@ const Customers = () => {
         });
         return;
       }
-      
-      console.log("Fetched customers:", data);
       setCustomers(data || []);
     } catch (error) {
       console.error("Error in fetchCustomers:", error);
@@ -101,11 +131,8 @@ const Customers = () => {
         title: "Customer deleted",
         description: "Customer has been deleted successfully",
       });
-      
-      // Always return to list view after deletion, regardless of current view
       setViewMode('list');
       setSelectedCustomer(null);
-      
       fetchCustomers();
     } catch (error) {
       console.error("Error in handleDeleteCustomer:", error);
@@ -116,6 +143,83 @@ const Customers = () => {
     setSelectedCustomer(customer);
     setViewMode('detail');
     setActiveTab("info");
+  };
+
+  // Filtering, Searching and Sorting logic:
+  const filteredSortedCustomers = useMemo(() => {
+    return customers
+      .filter((customer) => {
+        // Lead source filter
+        if (filterLeadSource && customer.lead_source !== filterLeadSource) return false;
+        // Date added filter
+        if (
+          filterDateAdded[0] &&
+          new Date(customer.created_at) < filterDateAdded[0]
+        )
+          return false;
+        if (
+          filterDateAdded[1] &&
+          new Date(customer.created_at) > filterDateAdded[1]
+        )
+          return false;
+        // Date modified filter
+        if (
+          filterDateModified[0] &&
+          new Date(customer.updated_at) < filterDateModified[0]
+        )
+          return false;
+        if (
+          filterDateModified[1] &&
+          new Date(customer.updated_at) > filterDateModified[1]
+        )
+          return false;
+        // Search filter: match by name, last_name, email, phone
+        const searchLower = search.toLowerCase();
+        return (
+          !search ||
+          customer.name.toLowerCase().includes(searchLower) ||
+          customer.last_name.toLowerCase().includes(searchLower) ||
+          customer.emails.some((e) => e.toLowerCase().includes(searchLower)) ||
+          customer.cell_numbers.some((n) => n.toLowerCase().includes(searchLower))
+        );
+      })
+      .sort((a, b) => {
+        let valA: any, valB: any;
+        if (sortBy === "name") {
+          valA = a.name?.toLowerCase();
+          valB = b.name?.toLowerCase();
+        } else if (sortBy === "last_name") {
+          valA = a.last_name?.toLowerCase();
+          valB = b.last_name?.toLowerCase();
+        } else if (sortBy === "created_at") {
+          valA = new Date(a.created_at).getTime();
+          valB = new Date(b.created_at).getTime();
+        } else if (sortBy === "updated_at") {
+          valA = new Date(a.updated_at).getTime();
+          valB = new Date(b.updated_at).getTime();
+        }
+        if (valA === valB) return 0;
+        if (sortDir === "asc") return valA > valB ? 1 : -1;
+        else return valA < valB ? 1 : -1;
+      });
+  }, [
+    customers,
+    search,
+    sortBy,
+    sortDir,
+    filterLeadSource,
+    filterDateAdded,
+    filterDateModified,
+  ]);
+
+  // For range picker display
+  const renderDateLabel = (range: [Date | undefined, Date | undefined]) => {
+    if (!range[0] && !range[1]) return "Any";
+    if (range[0] && range[1])
+      return `${format(range[0], "MMM d, yyyy")} - ${format(range[1], "MMM d, yyyy")}`;
+    if (range[0]) return `After ${format(range[0], "MMM d, yyyy")}`;
+    if (range[1]) return `Before ${format(range[1], "MMM d, yyyy")}`;
+    return "Any";
   };
 
   return (
@@ -134,19 +238,153 @@ const Customers = () => {
               New Customer
             </Button>
           </div>
+          {/* Controls: Search/filter/sort */}
+          <div className="mb-4 flex flex-col md:flex-row md:items-center gap-3">
+            <div className="relative w-full md:w-64">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                className="pl-10"
+                placeholder="Search customers…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                type="search"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Select value={sortBy} onValueChange={(v) => setSortBy(v)}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sortOptions.map(opt => (
+                    <SelectItem value={opt.value} key={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                size="icon"
+                variant="outline"
+                aria-label="Toggle sort direction"
+                onClick={() => setSortDir(d => d === "asc" ? "desc" : "asc")}
+              >
+                {sortDir === "asc" ? (
+                  <ArrowUp className="w-4 h-4" />
+                ) : (
+                  <ArrowDown className="w-4 h-4" />
+                )}
+              </Button>
+              <Popover open={showFilter} onOpenChange={setShowFilter}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="ml-2">
+                    <Filter className="w-4 h-4 mr-2" /> Filters
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-80">
+                  <div className="flex flex-col gap-4">
+                    {/* Lead Source */}
+                    <div>
+                      <label className="block text-xs mb-1 text-muted-foreground">Lead Source</label>
+                      <Select value={filterLeadSource} onValueChange={v => setFilterLeadSource(v)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Lead source" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {leadSourceOptions.map(opt => (
+                            <SelectItem value={opt.value} key={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {/* Date Added (Created) */}
+                    <div>
+                      <label className="block text-xs mb-1 text-muted-foreground">Date Added</label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="w-full">
+                            {renderDateLabel(filterDateAdded)}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent align="start" className="w-auto p-0">
+                          <Calendar
+                            mode="range"
+                            selected={{
+                              from: filterDateAdded[0],
+                              to: filterDateAdded[1],
+                            }}
+                            onSelect={(range) => setFilterDateAdded([range?.from, range?.to])}
+                            className={cn("p-3 pointer-events-auto")}
+                          />
+                          {(filterDateAdded[0] || filterDateAdded[1]) && (
+                            <Button type="button" size="sm" variant="link" onClick={() => setFilterDateAdded([undefined, undefined])}>
+                              Clear
+                            </Button>
+                          )}
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    {/* Date Modified (Updated) */}
+                    <div>
+                      <label className="block text-xs mb-1 text-muted-foreground">Last Modified</label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="w-full">
+                            {renderDateLabel(filterDateModified)}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent align="start" className="w-auto p-0">
+                          <Calendar
+                            mode="range"
+                            selected={{
+                              from: filterDateModified[0],
+                              to: filterDateModified[1],
+                            }}
+                            onSelect={(range) => setFilterDateModified([range?.from, range?.to])}
+                            className={cn("p-3 pointer-events-auto")}
+                          />
+                          {(filterDateModified[0] || filterDateModified[1]) && (
+                            <Button type="button" size="sm" variant="link" onClick={() => setFilterDateModified([undefined, undefined])}>
+                              Clear
+                            </Button>
+                          )}
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+              {(filterLeadSource || filterDateAdded[0] || filterDateAdded[1] || filterDateModified[0] || filterDateModified[1]) && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="ml-1"
+                  onClick={() => {
+                    setFilterLeadSource("");
+                    setFilterDateAdded([undefined, undefined]);
+                    setFilterDateModified([undefined, undefined]);
+                  }}
+                >
+                  Clear Filters
+                </Button>
+              )}
+            </div>
+          </div>
           
           {/* Customers list */}
           {loading ? (
             <div className="flex justify-center py-8">
               <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
             </div>
-          ) : customers.length === 0 ? (
+          ) : filteredSortedCustomers.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-lg text-muted-foreground">No customers found. Create your first customer!</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {customers.map((customer) => (
+              {filteredSortedCustomers.map((customer) => (
                 <Card key={customer.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => viewCustomerDetails(customer)}>
                   <CardHeader className="flex flex-row justify-between items-center">
                     <CardTitle>
@@ -364,3 +602,4 @@ const Customers = () => {
 };
 
 export default Customers;
+
