@@ -40,7 +40,6 @@ const sortOptions = [
   { value: "updated_at", label: "Last Modified" },
 ];
 
-// Updated leadSourceOptions: Removed "Referral"
 const leadSourceOptions = [
   { value: "Word of Mouth", label: "Word of Mouth" },
   { value: "Website", label: "Website" },
@@ -49,7 +48,7 @@ const leadSourceOptions = [
   { value: "LinkedIn", label: "LinkedIn" },
   { value: "Social Media", label: "Social Media (Other)" },
   { value: "Google", label: "Google" },
-  { value: "Car Branding", label: "Car Branding" }, 
+  { value: "Car Branding", label: "Car Branding" },
   { value: "House Branding", label: "House Branding" },
   { value: "Other", label: "Other (Unspecified)" },
 ];
@@ -57,7 +56,6 @@ const leadSourceOptions = [
 const socialMediaSources = ["Facebook", "Instagram", "LinkedIn", "Social Media"];
 const referralSources = ["Word of Mouth", "Referral"];
 const advertisingSources = ["Car Branding", "House Branding"];
-const otherSources = ["Other"];
 
 const Customers = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -182,46 +180,65 @@ const Customers = () => {
       .filter((customer) => {
         if (selectedLeadSources.length > 0) {
           const customerSource = customer.lead_source || "";
-          
+
           let matchesSelectedSource = false;
-          
+
           for (const selectedSource of selectedLeadSources) {
-            if (selectedSource === customerSource) {
+            if (
+              selectedSource === "Word of Mouth" &&
+              referralSources.includes(customerSource)
+            ) {
               matchesSelectedSource = true;
               break;
             }
-            
-            if (selectedSource === "Social Media" && socialMediaSources.includes(customerSource)) {
+
+            if (
+              selectedSource === "Social Media" &&
+              socialMediaSources.includes(customerSource)
+            ) {
               matchesSelectedSource = true;
               break;
             }
-            
-            if (selectedSource === "Word of Mouth" && referralSources.includes(customerSource)) {
+
+            if (selectedSource === "Car Branding" && customerSource === "Car Branding") {
               matchesSelectedSource = true;
               break;
             }
-            
-            if (selectedSource === "Other" && 
-              (!customerSource || 
-               (!leadSourceOptions.some(opt => opt.value === customerSource) && 
-                customerSource !== "Car Branding" && 
-                customerSource !== "House Branding"))) {
+
+            if (selectedSource === "House Branding" && customerSource === "House Branding") {
               matchesSelectedSource = true;
               break;
             }
-            
-            if ((selectedSource === "Car Branding" && customerSource === "Car Branding") ||
-                (selectedSource === "House Branding" && customerSource === "House Branding")) {
+
+            if (
+              selectedSource !== "Social Media" &&
+              selectedSource !== "Word of Mouth" &&
+              selectedSource !== "Car Branding" &&
+              selectedSource !== "House Branding" &&
+              selectedSource !== "Other" &&
+              selectedSource === customerSource
+            ) {
+              matchesSelectedSource = true;
+              break;
+            }
+
+            if (
+              selectedSource === "Other" &&
+              !leadSourceOptions
+                .slice(0, -1)
+                .map(o => o.value)
+                .includes(customerSource)
+            ) {
               matchesSelectedSource = true;
               break;
             }
           }
-          
+
           if (!matchesSelectedSource) {
             return false;
           }
         }
-        
+
         if (filterDateAdded[0] && new Date(customer.created_at).getTime() < new Date(filterDateAdded[0]).getTime()) {
           return false;
         }
@@ -241,8 +258,8 @@ const Customers = () => {
           !search ||
           customer.name?.toLowerCase().includes(searchLower) ||
           customer.last_name?.toLowerCase().includes(searchLower) ||
-          (customer.emails && customer.emails.some(e => e?.toLowerCase().includes(searchLower))) ||
-          (customer.cell_numbers && customer.cell_numbers.some(n => n?.toLowerCase().includes(searchLower)))
+          (customer.emails && customer.emails.some((e) => e?.toLowerCase().includes(searchLower))) ||
+          (customer.cell_numbers && customer.cell_numbers.some((n) => n?.toLowerCase().includes(searchLower)))
         );
       })
       .sort((a, b) => {
