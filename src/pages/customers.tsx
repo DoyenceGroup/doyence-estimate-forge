@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,7 +40,7 @@ const sortOptions = [
 ];
 
 const leadSourceOptions = [
-  { value: "", label: "All" },
+  { value: "all", label: "All" },
   { value: "Referral", label: "Referral" },
   { value: "Website", label: "Website" },
   { value: "Social Media", label: "Social Media" },
@@ -60,11 +59,10 @@ const Customers = () => {
   const { session } = useAuth();
   const navigate = useNavigate();
 
-  // Search, sort, and filter states
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("created_at");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  const [filterLeadSource, setFilterLeadSource] = useState("");
+  const [filterLeadSource, setFilterLeadSource] = useState("all");
   const [filterDateAdded, setFilterDateAdded] = useState<[Date | undefined, Date | undefined]>([undefined, undefined]);
   const [filterDateModified, setFilterDateModified] = useState<[Date | undefined, Date | undefined]>([undefined, undefined]);
   const [showFilter, setShowFilter] = useState(false);
@@ -145,14 +143,11 @@ const Customers = () => {
     setActiveTab("info");
   };
 
-  // Filtering, Searching and Sorting logic:
   const filteredSortedCustomers = useMemo(() => {
     return customers
       .filter((customer) => {
-        // Lead source filter
-        if (filterLeadSource && customer.lead_source !== filterLeadSource) return false;
+        if (filterLeadSource && filterLeadSource !== "all" && customer.lead_source !== filterLeadSource) return false;
         
-        // Date added filter
         if (
           filterDateAdded[0] &&
           new Date(customer.created_at).getTime() < new Date(filterDateAdded[0]).getTime()
@@ -160,11 +155,10 @@ const Customers = () => {
           return false;
         if (
           filterDateAdded[1] &&
-          new Date(customer.created_at).getTime() > new Date(filterDateAdded[1]).getTime() + 86400000 // Add one day in milliseconds
+          new Date(customer.created_at).getTime() > new Date(filterDateAdded[1]).getTime() + 86400000
         )
           return false;
         
-        // Date modified filter
         if (
           filterDateModified[0] &&
           new Date(customer.updated_at).getTime() < new Date(filterDateModified[0]).getTime()
@@ -172,11 +166,10 @@ const Customers = () => {
           return false;
         if (
           filterDateModified[1] &&
-          new Date(customer.updated_at).getTime() > new Date(filterDateModified[1]).getTime() + 86400000 // Add one day in milliseconds
+          new Date(customer.updated_at).getTime() > new Date(filterDateModified[1]).getTime() + 86400000
         )
           return false;
         
-        // Search filter: match by name, last_name, email, phone
         const searchLower = search.toLowerCase();
         return (
           !search ||
@@ -220,7 +213,6 @@ const Customers = () => {
     filterDateModified,
   ]);
 
-  // For range picker display
   const renderDateLabel = (range: [Date | undefined, Date | undefined]) => {
     if (!range[0] && !range[1]) return "Any";
     if (range[0] && range[1])
@@ -247,7 +239,6 @@ const Customers = () => {
             </Button>
           </div>
           
-          {/* Controls: Search/filter/sort */}
           <div className="mb-4 flex flex-col md:flex-row md:items-center gap-3">
             <div className="relative w-full md:w-64">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -292,7 +283,6 @@ const Customers = () => {
                 </PopoverTrigger>
                 <PopoverContent align="start" className="w-80 bg-background">
                   <div className="flex flex-col gap-4">
-                    {/* Lead Source */}
                     <div>
                       <label className="block text-xs mb-1 text-muted-foreground">Lead Source</label>
                       <Select value={filterLeadSource} onValueChange={v => setFilterLeadSource(v)}>
@@ -308,7 +298,6 @@ const Customers = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    {/* Date Added (Created) */}
                     <div>
                       <label className="block text-xs mb-1 text-muted-foreground">Date Added</label>
                       <Popover>
@@ -335,7 +324,6 @@ const Customers = () => {
                         </PopoverContent>
                       </Popover>
                     </div>
-                    {/* Date Modified (Updated) */}
                     <div>
                       <label className="block text-xs mb-1 text-muted-foreground">Last Modified</label>
                       <Popover>
@@ -365,13 +353,13 @@ const Customers = () => {
                   </div>
                 </PopoverContent>
               </Popover>
-              {(filterLeadSource || filterDateAdded[0] || filterDateAdded[1] || filterDateModified[0] || filterDateModified[1]) && (
+              {(filterLeadSource !== "all" || filterDateAdded[0] || filterDateAdded[1] || filterDateModified[0] || filterDateModified[1]) && (
                 <Button
                   size="sm"
                   variant="ghost"
                   className="ml-1"
                   onClick={() => {
-                    setFilterLeadSource("");
+                    setFilterLeadSource("all");
                     setFilterDateAdded([undefined, undefined]);
                     setFilterDateModified([undefined, undefined]);
                   }}
@@ -382,7 +370,6 @@ const Customers = () => {
             </div>
           </div>
           
-          {/* Customers list */}
           {loading ? (
             <div className="flex justify-center py-8">
               <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
@@ -593,7 +580,6 @@ const Customers = () => {
         </>
       )}
       
-      {/* Create/Edit dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
