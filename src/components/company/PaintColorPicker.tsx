@@ -35,6 +35,8 @@ interface PaintColorPickerProps {
 export default function PaintColorPicker({ value, onChange }: PaintColorPickerProps) {
   const [hexInput, setHexInput] = useState(value || "#3b82f6");
   const [showSpectrum, setShowSpectrum] = useState(false);
+  // Add a refreshKey to force canvas redraw
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     setHexInput(value);
@@ -48,8 +50,21 @@ export default function PaintColorPicker({ value, onChange }: PaintColorPickerPr
   const [spectrumPos, setSpectrumPos] = useState<{ x: number; y: number }>({ x: 120, y: 10 }); // somewhere near blue, not corner
   const [dragging, setDragging] = useState(false);
 
+  // Force redraw when component mounts and when refreshKey changes
   useEffect(() => {
     drawSpectrum();
+    
+    // Force a second draw after a short delay to ensure it renders properly
+    const timer = setTimeout(() => {
+      drawSpectrum();
+    }, 50);
+    
+    return () => clearTimeout(timer);
+  }, [refreshKey]);
+
+  // Immediately trigger a redraw on first render
+  useEffect(() => {
+    setRefreshKey(prev => prev + 1);
   }, []);
 
   function drawSpectrum() {
@@ -58,32 +73,40 @@ export default function PaintColorPicker({ value, onChange }: PaintColorPickerPr
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Create a gradient (Hue left-right) with vivid color stops
+    // Clear the canvas first
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Create a gradient (Hue left-right) with super-vivid color stops
     const w = canvas.width, h = canvas.height;
     const gradH = ctx.createLinearGradient(0, 0, w, 0);
-    gradH.addColorStop(0 / 6, "#ef4444");  // vivid red
-    gradH.addColorStop(1 / 6, "#f97316");  // bright orange
-    gradH.addColorStop(2 / 6, "#22c55e");  // bright green
-    gradH.addColorStop(3 / 6, "#0ea5e9");  // ocean blue
-    gradH.addColorStop(4 / 6, "#8B5CF6");  // vivid purple
-    gradH.addColorStop(5 / 6, "#db2777");  // magenta pink
-    gradH.addColorStop(6 / 6, "#ef4444");  // loop back to vivid red
+    
+    // Use ultra-saturated vivid colors for maximum vibrancy
+    gradH.addColorStop(0, "#FF0000");      // Pure red
+    gradH.addColorStop(0.17, "#FF8000");   // Bright orange
+    gradH.addColorStop(0.33, "#00FF00");   // Pure green
+    gradH.addColorStop(0.5, "#00FFFF");    // Cyan
+    gradH.addColorStop(0.67, "#0080FF");   // Bright blue
+    gradH.addColorStop(0.83, "#8000FF");   // Vivid purple
+    gradH.addColorStop(1, "#FF00FF");      // Magenta
+    
     ctx.fillStyle = gradH;
     ctx.fillRect(0, 0, w, h);
 
-    // White gradient top
-    const gradW = ctx.createLinearGradient(0, 0, 0, h);
-    gradW.addColorStop(0, "rgba(255,255,255,1)");
+    // White gradient top (less white to preserve more saturation)
+    const gradW = ctx.createLinearGradient(0, 0, 0, h * 0.5);
+    gradW.addColorStop(0, "rgba(255,255,255,0.8)");
     gradW.addColorStop(1, "rgba(255,255,255,0)");
     ctx.fillStyle = gradW;
-    ctx.fillRect(0, 0, w, h);
+    ctx.fillRect(0, 0, w, h * 0.5);
 
     // Black gradient bottom
-    const gradB = ctx.createLinearGradient(0, 0, 0, h);
+    const gradB = ctx.createLinearGradient(0, h * 0.5, 0, h);
     gradB.addColorStop(0, "rgba(0,0,0,0)");
     gradB.addColorStop(1, "rgba(0,0,0,1)");
     ctx.fillStyle = gradB;
-    ctx.fillRect(0, 0, w, h);
+    ctx.fillRect(0, h * 0.5, w, h * 0.5);
+    
+    console.log("Spectrum canvas redrawn with vivid colors");
   }
 
   function getColorAtPosition(x: number, y: number) {
@@ -188,6 +211,7 @@ export default function PaintColorPicker({ value, onChange }: PaintColorPickerPr
               style={{ touchAction: "none" }}
               onMouseDown={handleSpectrumDown}
               onTouchStart={handleSpectrumDown}
+              onClick={() => setRefreshKey(prev => prev + 1)}
             />
             {/* Marker for selected color */}
             <div
@@ -229,4 +253,3 @@ export default function PaintColorPicker({ value, onChange }: PaintColorPickerPr
     </div>
   );
 }
-
