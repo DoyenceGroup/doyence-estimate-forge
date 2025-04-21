@@ -42,16 +42,22 @@ const sortOptions = [
 
 const leadSourceOptions = [
   { value: "Referral", label: "Referral" },
+  { value: "Word of Mouth", label: "Word of Mouth" },
   { value: "Website", label: "Website" },
   { value: "Facebook", label: "Facebook" },
   { value: "Instagram", label: "Instagram" },
   { value: "LinkedIn", label: "LinkedIn" },
   { value: "Social Media", label: "Social Media (Other)" },
   { value: "Google", label: "Google" },
-  { value: "Other", label: "Other" },
+  { value: "Car Branding", label: "Car Branding" }, 
+  { value: "House Branding", label: "House Branding" },
+  { value: "Other", label: "Other (Unspecified)" },
 ];
 
 const socialMediaSources = ["Facebook", "Instagram", "LinkedIn", "Social Media"];
+const referralSources = ["Referral", "Word of Mouth"];
+const advertisingSources = ["Car Branding", "House Branding"];
+const otherSources = ["Other"];
 
 const Customers = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -176,12 +182,47 @@ const Customers = () => {
       .filter((customer) => {
         if (selectedLeadSources.length > 0) {
           const customerSource = customer.lead_source || "";
-          if (selectedLeadSources.includes("Social Media")) {
-            if (socialMediaSources.includes(customerSource)) {
-              return true;
+          
+          let matchesSelectedSource = false;
+          
+          for (const selectedSource of selectedLeadSources) {
+            if (selectedSource === customerSource) {
+              matchesSelectedSource = true;
+              break;
+            }
+            
+            if (selectedSource === "Social Media" && socialMediaSources.includes(customerSource)) {
+              matchesSelectedSource = true;
+              break;
+            }
+            
+            if (selectedSource === "Referral" && referralSources.includes(customerSource)) {
+              matchesSelectedSource = true;
+              break;
+            }
+            
+            if (selectedSource === "Word of Mouth" && referralSources.includes(customerSource)) {
+              matchesSelectedSource = true;
+              break;
+            }
+            
+            if (selectedSource === "Other" && 
+                (!customerSource || 
+                 (!leadSourceOptions.some(opt => opt.value === customerSource) && 
+                  customerSource !== "Car Branding" && 
+                  customerSource !== "House Branding"))) {
+              matchesSelectedSource = true;
+              break;
+            }
+            
+            if ((selectedSource === "Car Branding" && customerSource === "Car Branding") ||
+                (selectedSource === "House Branding" && customerSource === "House Branding")) {
+              matchesSelectedSource = true;
+              break;
             }
           }
-          if (!selectedLeadSources.includes(customerSource)) {
+          
+          if (!matchesSelectedSource) {
             return false;
           }
         }
@@ -578,11 +619,11 @@ const Customers = () => {
                       </div>
                       <div>
                         <p className="text-sm font-medium text-muted-foreground mb-1">Phone Number(s)</p>
-                        <p>{selectedCustomer?.cell_numbers.length ? selectedCustomer?.cell_numbers.join(", ") : "None provided"}</p>
+                        <p>{selectedCustomer?.cell_numbers?.length ? selectedCustomer?.cell_numbers.join(", ") : "None provided"}</p>
                       </div>
                       <div>
                         <p className="text-sm font-medium text-muted-foreground mb-1">Email(s)</p>
-                        <p>{selectedCustomer?.emails.length ? selectedCustomer?.emails.join(", ") : "None provided"}</p>
+                        <p>{selectedCustomer?.emails?.length ? selectedCustomer?.emails.join(", ") : "None provided"}</p>
                       </div>
                       <div className="col-span-1 md:col-span-2">
                         <p className="text-sm font-medium text-muted-foreground mb-1">Lead Source</p>
