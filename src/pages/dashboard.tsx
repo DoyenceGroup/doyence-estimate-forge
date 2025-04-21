@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, Users, Clock, Wrench, FileSpreadsheet } from "lucide-react";
@@ -7,18 +7,18 @@ import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/layout/Navbar";
 import AppSidebar from "@/components/app-sidebar";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
-import { supabase } from "@/integrations/supabase/client";
 
 const Dashboard = () => {
   const [_, setRerender] = useState({});
   const { user, profile } = useAuth();
   const navigate = useNavigate();
-  const [stats, setStats] = useState([
-    { name: "Active Estimates", value: "0", icon: FileText, color: "text-blue-500", path: "/estimates" },
-    { name: "Total Customers", value: "0", icon: Users, color: "text-green-500", path: "/customers" },
-    { name: "Pending Invoices", value: "0", icon: FileSpreadsheet, color: "text-amber-500", path: "/invoices" },
-    { name: "Recent Projects", value: "0", icon: Wrench, color: "text-purple-500", path: "/projects" },
-  ]);
+
+  const stats = [
+    { name: "Active Estimates", value: "5", icon: FileText, color: "text-blue-500" },
+    { name: "Total Customers", value: "12", icon: Users, color: "text-green-500" },
+    { name: "Pending Invoices", value: "3", icon: FileSpreadsheet, color: "text-amber-500" },
+    { name: "Recent Projects", value: "8", icon: Wrench, color: "text-purple-500" },
+  ];
 
   const recentActivity = [
     { id: 1, action: "Estimate created", project: "Kitchen Renovation", customer: "John Smith", time: "2 hours ago" },
@@ -26,39 +26,6 @@ const Dashboard = () => {
     { id: 3, action: "Estimate approved", project: "Bathroom Remodel", customer: "Mike Davis", time: "3 days ago" },
     { id: 4, action: "Invoice sent", project: "Deck Construction", customer: "Emily Wilson", time: "1 week ago" },
   ];
-
-  // Fetch stats from Supabase
-  useEffect(() => {
-    const fetchStats = async () => {
-      if (!user?.id) return;
-
-      try {
-        // Fetch customer count
-        const { count: customerCount, error: customerError } = await supabase
-          .from('customers')
-          .select('*', { count: 'exact', head: true });
-
-        if (customerError) {
-          console.error('Error fetching customer count:', customerError);
-          return;
-        }
-
-        // Update the stats array with the actual customer count
-        setStats(currentStats => 
-          currentStats.map(stat => 
-            stat.name === "Total Customers" 
-              ? { ...stat, value: String(customerCount || 0) }
-              : stat
-          )
-        );
-
-      } catch (error) {
-        console.error('Error fetching stats:', error);
-      }
-    };
-
-    fetchStats();
-  }, [user?.id]);
 
   return (
     <SidebarProvider>
@@ -80,11 +47,7 @@ const Dashboard = () => {
               
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
                 {stats.map((stat) => (
-                  <Card 
-                    key={stat.name}
-                    className="cursor-pointer transition-all hover:shadow-md"
-                    onClick={() => navigate(stat.path)}
-                  >
+                  <Card key={stat.name}>
                     <CardContent className="flex items-center p-6">
                       <div className="p-2 rounded-full bg-gray-100 mr-4">
                         <stat.icon className={`h-6 w-6 ${stat.color}`} />
