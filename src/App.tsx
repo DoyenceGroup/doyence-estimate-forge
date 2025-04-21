@@ -1,4 +1,3 @@
-
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -11,11 +10,11 @@ import Verify from "@/pages/verify";
 import ProfileSetup from "@/pages/profile-setup";
 import Index from "@/pages/Index";
 import Settings from "@/pages/company/Settings";
+import Customers from "@/pages/customers";
 import { Toaster } from "@/components/ui/toaster";
 import { CSSTransition, TransitionGroup } from "react-transition-group";
 import "./route-transitions.css";
 
-// Loading component to prevent multiple loaders being created
 const LoadingSpinner = () => (
   <div className="p-8 flex items-center justify-center">
     <div className="text-center">
@@ -25,7 +24,6 @@ const LoadingSpinner = () => (
   </div>
 );
 
-// Modified to prevent unnecessary remounts when switching tabs
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const { session, isLoading } = useAuth();
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
@@ -68,7 +66,6 @@ const UnauthenticatedOnlyRoute = ({ children }: { children: JSX.Element }) => {
   return children;
 };
 
-// Improved AnimatedRoutes with persistent memory between tab switches
 const AnimatedRoutes = () => {
   const location = useLocation();
 
@@ -107,6 +104,14 @@ const AnimatedRoutes = () => {
             }
           />
           <Route
+            path="/customers"
+            element={
+              <ProtectedRoute>
+                <Customers />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/login"
             element={
               <UnauthenticatedOnlyRoute>
@@ -131,9 +136,7 @@ const AnimatedRoutes = () => {
   );
 };
 
-// App wrapper with memory-efficient session timeout
 function AppWithProviders() {
-  // Use a ref to track if this is the first mount to prevent unnecessary reinitializations
   const [initialized, setInitialized] = useState(false);
   
   useEffect(() => {
@@ -154,7 +157,6 @@ function AppWithProviders() {
   );
 }
 
-// Root component that gets mounted
 function App() {
   return (
     <BrowserRouter>
