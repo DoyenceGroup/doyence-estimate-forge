@@ -155,24 +155,24 @@ const Customers = () => {
         // Date added filter
         if (
           filterDateAdded[0] &&
-          new Date(customer.created_at) < new Date(filterDateAdded[0])
+          new Date(customer.created_at).getTime() < new Date(filterDateAdded[0]).getTime()
         )
           return false;
         if (
           filterDateAdded[1] &&
-          new Date(customer.created_at) > new Date(filterDateAdded[1])
+          new Date(customer.created_at).getTime() > new Date(filterDateAdded[1]).getTime() + 86400000 // Add one day in milliseconds
         )
           return false;
         
         // Date modified filter
         if (
           filterDateModified[0] &&
-          new Date(customer.updated_at) < new Date(filterDateModified[0])
+          new Date(customer.updated_at).getTime() < new Date(filterDateModified[0]).getTime()
         )
           return false;
         if (
           filterDateModified[1] &&
-          new Date(customer.updated_at) > new Date(filterDateModified[1])
+          new Date(customer.updated_at).getTime() > new Date(filterDateModified[1]).getTime() + 86400000 // Add one day in milliseconds
         )
           return false;
         
@@ -182,25 +182,28 @@ const Customers = () => {
           !search ||
           customer.name.toLowerCase().includes(searchLower) ||
           customer.last_name.toLowerCase().includes(searchLower) ||
-          (customer.emails && customer.emails.some((e) => e.toLowerCase().includes(searchLower))) ||
-          (customer.cell_numbers && customer.cell_numbers.some((n) => n.toLowerCase().includes(searchLower)))
+          (customer.emails && customer.emails.some((e) => e?.toLowerCase().includes(searchLower))) ||
+          (customer.cell_numbers && customer.cell_numbers.some((n) => n?.toLowerCase().includes(searchLower)))
         );
       })
       .sort((a, b) => {
         let valA: any, valB: any;
         
         if (sortBy === "name") {
-          valA = a.name?.toLowerCase();
-          valB = b.name?.toLowerCase();
+          valA = a.name?.toLowerCase() || "";
+          valB = b.name?.toLowerCase() || "";
         } else if (sortBy === "last_name") {
-          valA = a.last_name?.toLowerCase();
-          valB = b.last_name?.toLowerCase();
+          valA = a.last_name?.toLowerCase() || "";
+          valB = b.last_name?.toLowerCase() || "";
         } else if (sortBy === "created_at") {
-          valA = new Date(a.created_at).getTime();
-          valB = new Date(b.created_at).getTime();
+          valA = new Date(a.created_at || 0).getTime();
+          valB = new Date(b.created_at || 0).getTime();
         } else if (sortBy === "updated_at") {
-          valA = new Date(a.updated_at).getTime();
-          valB = new Date(b.updated_at).getTime();
+          valA = new Date(a.updated_at || 0).getTime();
+          valB = new Date(b.updated_at || 0).getTime();
+        } else {
+          valA = "";
+          valB = "";
         }
         
         if (valA === valB) return 0;
@@ -281,7 +284,7 @@ const Customers = () => {
                   <ArrowDown className="w-4 h-4" />
                 )}
               </Button>
-              <Popover open={showFilter} onOpenChange={setShowFilter}>
+              <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" size="sm" className="ml-2">
                     <Filter className="w-4 h-4 mr-2" /> Filters
@@ -444,11 +447,11 @@ const Customers = () => {
                   <CardContent>
                     <div className="mb-2">
                       <span className="font-semibold">Phone(s): </span>
-                      {customer.cell_numbers.length > 0 ? customer.cell_numbers.join(", ") : "None provided"}
+                      {customer.cell_numbers && customer.cell_numbers.length > 0 ? customer.cell_numbers.join(", ") : "None provided"}
                     </div>
                     <div className="mb-2">
                       <span className="font-semibold">Email(s): </span>
-                      {customer.emails.length > 0 ? customer.emails.join(", ") : "None provided"}
+                      {customer.emails && customer.emails.length > 0 ? customer.emails.join(", ") : "None provided"}
                     </div>
                     <div className="mb-2">
                       <span className="font-semibold">Address: </span>
