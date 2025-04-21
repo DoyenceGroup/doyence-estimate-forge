@@ -6,6 +6,8 @@ import { Plus, Edit } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { CustomerForm } from "@/components/customers/CustomerForm";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Customer = {
   id: string;
@@ -15,26 +17,58 @@ type Customer = {
   cell_numbers: string[];
   emails: string[];
   lead_source: string;
+  lead_source_description?: string;
 };
 
 const Customers = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Customer | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+  const { session } = useAuth();
 
   async function fetchCustomers() {
-    const { data } = await supabase.from("customers").select("*").order("created_at", { ascending: false });
-    setCustomers(data || []);
+    try {
+      setLoading(true);
+      if (!session?.user?.id) return;
+      
+      const { data, error } = await supabase
+        .from("customers")
+        .select("*")
+        .order("created_at", { ascending: false });
+      
+      if (error) {
+        console.error("Error fetching customers:", error);
+        toast({
+          title: "Error fetching customers",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      console.log("Fetched customers:", data);
+      setCustomers(data || []);
+    } catch (error) {
+      console.error("Error in fetchCustomers:", error);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
     fetchCustomers();
-  }, []);
+  }, [session?.user?.id]);
 
   const handleFormSave = () => {
     setOpen(false);
     setEditing(null);
     fetchCustomers();
+    toast({
+      title: editing ? "Customer updated" : "Customer created",
+      description: `${editing ? "Updated" : "Created"} successfully`,
+    });
   };
 
   return (
@@ -46,39 +80,56 @@ const Customers = () => {
           New Customer
         </Button>
       </div>
+      
       {/* Customers list */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {customers.map((customer) => (
-          <Card key={customer.id}>
-            <CardHeader className="flex flex-row justify-between items-center">
-              <CardTitle>
-                {customer.name} {customer.last_name}
-              </CardTitle>
-              <Button size="icon" variant="ghost" onClick={() => { setEditing(customer); setOpen(true); }} aria-label="Edit customer">
-                <Edit className="w-4 h-4" />
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-2">
-                <span className="font-semibold">Phone(s): </span>
-                {customer.cell_numbers.join(", ")}
-              </div>
-              <div className="mb-2">
-                <span className="font-semibold">Email(s): </span>
-                {customer.emails.join(", ")}
-              </div>
-              <div className="mb-2">
-                <span className="font-semibold">Address: </span>
-                {customer.address}
-              </div>
-              <div>
-                <span className="font-semibold">Lead Source: </span>
-                {customer.lead_source}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {loading ? (
+        <div className="flex justify-center py-8">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+        </div>
+      ) : customers.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-lg text-muted-foreground">No customers found. Create your first customer!</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {customers.map((customer) => (
+            <Card key={customer.id}>
+              <CardHeader className="flex flex-row justify-between items-center">
+                <CardTitle>
+                  {customer.name} {customer.last_name}
+                </CardTitle>
+                <Button size="icon" variant="ghost" onClick={() => { setEditing(customer); setOpen(true); }} aria-label="Edit customer">
+                  <Edit className="w-4 h-4" />
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-2">
+                  <span className="font-semibold">Phone(s): </span>
+                  {customer.cell_numbers.length > 0 ? customer.cell_numbers.join(", ") : "None provided"}
+                </div>
+                <div className="mb-2">
+                  <span className="font-semibold">Email(s): </span>
+                  {customer.emails.length > 0 ? customer.emails.join(", ") : "None provided"}
+                </div>
+                <div className="mb-2">
+                  <span className="font-semibold">Address: </span>
+                  {customer.address || "None provided"}
+                </div>
+                <div>
+                  <span className="font-semibold">Lead Source: </span>
+                  {customer.lead_source || "None specified"}
+                  {customer.lead_source === "Other" && customer.lead_source_description && (
+                    <span className="ml-1 text-sm text-muted-foreground">
+                      ({customer.lead_source_description})
+                    </span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+      
       {/* Create/Edit dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>

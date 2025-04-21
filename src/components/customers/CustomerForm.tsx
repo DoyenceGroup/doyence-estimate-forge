@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { Input } from "@/components/ui/input";
@@ -22,6 +21,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { useToast } from "@/components/ui/use-toast";
 
 type CustomerFormProps = {
   customer?: any;
@@ -61,6 +61,7 @@ export function CustomerForm({
   const [leadSource, setLeadSource] = useState(
     customer?.lead_source || ""
   );
+  const { toast } = useToast();
 
   const form = useForm<CustomerFormType>({
     defaultValues: customer
@@ -91,7 +92,6 @@ export function CustomerForm({
   const {
     control,
     handleSubmit,
-    register,
     formState: { errors, isSubmitting },
     reset,
     setValue,
@@ -112,35 +112,58 @@ export function CustomerForm({
   const watchedLeadSource = watch("lead_source");
 
   async function onSubmit(values: CustomerFormType) {
-    const newCustomer = {
-      name: values.name,
-      last_name: values.last_name,
-      cell_numbers: values.cell_numbers.map((c) => c.value).filter(Boolean),
-      emails: values.emails.map((e) => e.value).filter(Boolean),
-      address: values.address,
-      lead_source: values.lead_source,
-      lead_source_description:
-        values.lead_source === "Other"
-          ? values.lead_source_description
-          : null,
-    };
-    let result;
-    if (customer) {
-      result = await supabase
-        .from("customers")
-        .update({
+    try {
+      const newCustomer = {
+        name: values.name,
+        last_name: values.last_name,
+        cell_numbers: values.cell_numbers.map((c) => c.value).filter(Boolean),
+        emails: values.emails.map((e) => e.value).filter(Boolean),
+        address: values.address,
+        lead_source: values.lead_source,
+        lead_source_description:
+          values.lead_source === "Other"
+            ? values.lead_source_description
+            : null,
+      };
+      
+      console.log("Saving customer:", newCustomer);
+      
+      let result;
+      if (customer) {
+        result = await supabase
+          .from("customers")
+          .update({
+            ...newCustomer,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", customer.id);
+      } else {
+        result = await supabase.from("customers").insert({
           ...newCustomer,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", customer.id);
-    } else {
-      result = await supabase.from("customers").insert({
-        ...newCustomer,
-        created_by: (await supabase.auth.getUser()).data.user?.id,
+          created_by: (await supabase.auth.getUser()).data.user?.id,
+        });
+      }
+      
+      if (result.error) {
+        console.error("Error saving customer:", result.error);
+        toast({
+          title: "Error saving customer",
+          description: result.error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      onSave();
+      reset();
+    } catch (error) {
+      console.error("Error in onSubmit:", error);
+      toast({
+        title: "Error saving customer",
+        description: "An unexpected error occurred",
+        variant: "destructive",
       });
     }
-    onSave();
-    reset();
   }
 
   return (
@@ -186,7 +209,7 @@ export function CustomerForm({
             {cellFields.map((field, idx) => (
               <div className="flex items-center gap-2" key={field.id}>
                 <Input
-                  {...register(`cell_numbers.${idx}.value`, {
+                  {...form.register(`cell_numbers.${idx}.value`, {
                     required:
                       idx === 0
                         ? "At least 1 number required"
@@ -239,7 +262,7 @@ export function CustomerForm({
             {emailFields.map((field, idx) => (
               <div className="flex items-center gap-2" key={field.id}>
                 <Input
-                  {...register(`emails.${idx}.value`, {
+                  {...form.register(`emails.${idx}.value`, {
                     required:
                       idx === 0
                         ? "At least 1 email required"
