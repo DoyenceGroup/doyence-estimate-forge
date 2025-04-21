@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Palette } from "lucide-react";
+import PaintColorPicker from "./PaintColorPicker";
 
 const TAILWIND_PALETTE = [
   // Blue
@@ -42,17 +42,13 @@ const TAILWIND_PALETTE = [
 const getDefaultColor = () => "blue-500";
 
 const CompanyTheme = () => {
-  const [selectedId, setSelectedId] = useState(getDefaultColor());
-  const [customColor, setCustomColor] = useState("");
-  const [isCustom, setIsCustom] = useState(false);
+  const [selectedColor, setSelectedColor] = useState(getDefaultColor());
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Get the color value
-  const selectedThemeColor = isCustom
-    ? (customColor.startsWith("#") ? customColor : "#" + customColor)
-    : TAILWIND_PALETTE.find(t => t.id === selectedId)?.color || "#3b82f6";
+  // Get color value for previews
+  const selectedThemeColor = selectedColor;
 
   const handleSaveTheme = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,7 +65,7 @@ const CompanyTheme = () => {
       // Future: Save the theme to user's company
       toast({
         title: "Theme updated",
-        description: `Your company theme color has been updated to ${isCustom ? customColor : selectedId}.`,
+        description: `Your company theme color has been updated to ${selectedColor}.`,
       });
     } catch (error: any) {
       toast({
@@ -81,15 +77,6 @@ const CompanyTheme = () => {
       setIsLoading(false);
     }
   };
-
-  const handleSwatchClick = (id: string) => {
-    setSelectedId(id);
-    setIsCustom(false);
-  };
-
-  // HEX validate (simple)
-  const isValidHex = (input: string) =>
-    /^#?([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(input);
 
   return (
     <Card>
@@ -108,65 +95,13 @@ const CompanyTheme = () => {
             <div>
               <Label>Primary Color</Label>
               <p className="text-sm text-gray-500 mb-4">
-                Select a color swatch or enter your own custom HEX color.
+                Select or pick your company brand color below.
               </p>
-              {/* Palette grid */}
-              <div className="grid grid-cols-10 gap-2">
-                {TAILWIND_PALETTE.map(theme => (
-                  <button
-                    key={theme.id}
-                    type="button"
-                    aria-label={theme.id}
-                    className={`w-8 h-8 rounded-full border-2 flex items-center justify-center relative transition-colors
-                      ${isCustom ? "" : selectedId === theme.id ? "border-primary-600 ring-2 ring-primary-300" : "border-gray-200"}
-                      focus:outline-none`}
-                    style={{ backgroundColor: theme.color }}
-                    onClick={() => handleSwatchClick(theme.id)}
-                  >
-                    {selectedId === theme.id && !isCustom && (
-                      <span className="absolute inset-0 rounded-full border-2 border-white pointer-events-none"></span>
-                    )}
-                  </button>
-                ))}
-              </div>
-              {/* Custom HEX input */}
-              <div className="flex items-center gap-2 mt-4">
-                <input
-                  type="text"
-                  maxLength={7}
-                  placeholder="#123456"
-                  aria-label="Custom HEX"
-                  className="w-32 px-2 py-1 border rounded text-sm"
-                  value={isCustom ? customColor : ""}
-                  onFocus={() => setIsCustom(true)}
-                  onChange={e => {
-                    setCustomColor(e.target.value.replace(/[^#A-Fa-f0-9]/g, ''));
-                    setIsCustom(true);
-                  }}
-                />
-                <Button
-                  type="button"
-                  variant={isCustom ? "default" : "outline"}
-                  disabled={!isCustom || !isValidHex(customColor)}
-                  style={{
-                    backgroundColor: isCustom && isValidHex(customColor) ? (customColor.startsWith("#") ? customColor : `#${customColor}`) : undefined,
-                    color: isCustom && isValidHex(customColor) ? "#fff" : undefined
-                  }}
-                  className="w-8 h-8 min-w-0 p-0 rounded-full border"
-                  onClick={() => {
-                    if (isValidHex(customColor)) setIsCustom(true);
-                  }}
-                  aria-label="Custom color preview"
-                >
-                  #
-                </Button>
-                <span className="text-xs text-gray-400 ml-1">
-                  Enter custom HEX (e.g., #f87171)
-                </span>
-              </div>
-              {isCustom && !isValidHex(customColor) && customColor.length > 0 && (
-                <div className="text-red-500 text-xs mt-1">Invalid HEX format.</div>
-              )}
+              {/* MS Paint style color picker */}
+              <PaintColorPicker
+                value={selectedColor}
+                onChange={setSelectedColor}
+              />
             </div>
             <div className="mt-6 pt-6 border-t">
               <Label>Preview</Label>
@@ -205,7 +140,7 @@ const CompanyTheme = () => {
           </div>
         </CardContent>
         <CardFooter>
-          <Button type="submit" disabled={isLoading || (isCustom && !isValidHex(customColor))}
+          <Button type="submit" disabled={isLoading}
             style={{ backgroundColor: selectedThemeColor, color: "#fff" }}>
             {isLoading ? "Saving..." : "Save Theme"}
           </Button>
