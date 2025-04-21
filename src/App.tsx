@@ -1,4 +1,3 @@
-
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -81,22 +80,6 @@ const AnimatedRoutes = () => {
       >
         <Routes location={location}>
           <Route
-            path="/"
-            element={<Index />}
-          />
-          <Route
-            path="/login"
-            element={<Login />}
-          />
-          <Route
-            path="/signup"
-            element={
-              <UnauthenticatedOnlyRoute>
-                <Signup />
-              </UnauthenticatedOnlyRoute>
-            }
-          />
-          <Route
             path="/dashboard"
             element={
               <ProtectedRoute>
@@ -128,7 +111,24 @@ const AnimatedRoutes = () => {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/login"
+            element={
+              <UnauthenticatedOnlyRoute>
+                <Login />
+              </UnauthenticatedOnlyRoute>
+            }
+          />
+          <Route
+            path="/signup"
+            element={
+              <UnauthenticatedOnlyRoute>
+                <Signup />
+              </UnauthenticatedOnlyRoute>
+            }
+          />
           <Route path="/verify" element={<Verify />} />
+          <Route path="/" element={<Index />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </CSSTransition>

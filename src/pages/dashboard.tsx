@@ -8,7 +8,6 @@ import Navbar from "@/components/layout/Navbar";
 import AppSidebar from "@/components/app-sidebar";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/components/ui/use-toast";
 
 const Dashboard = () => {
   const [_, setRerender] = useState({});
@@ -31,14 +30,9 @@ const Dashboard = () => {
   // Fetch stats from Supabase
   useEffect(() => {
     const fetchStats = async () => {
-      if (!user?.id) {
-        console.log("No user ID found, skipping stats fetch");
-        return;
-      }
+      if (!user?.id) return;
 
       try {
-        console.log("Fetching customer count for user:", user.id);
-        
         // Fetch customer count
         const { count: customerCount, error: customerError } = await supabase
           .from('customers')
@@ -46,15 +40,8 @@ const Dashboard = () => {
 
         if (customerError) {
           console.error('Error fetching customer count:', customerError);
-          toast({
-            title: "Error fetching customer count",
-            description: customerError.message,
-            variant: "destructive",
-          });
           return;
         }
-
-        console.log("Customer count fetched:", customerCount);
 
         // Update the stats array with the actual customer count
         setStats(currentStats => 
@@ -65,23 +52,13 @@ const Dashboard = () => {
           )
         );
 
-      } catch (error: any) {
+      } catch (error) {
         console.error('Error fetching stats:', error);
-        toast({
-          title: "Error fetching stats",
-          description: "Could not retrieve customer statistics",
-          variant: "destructive",
-        });
       }
     };
 
     fetchStats();
   }, [user?.id]);
-
-  const handleCardClick = (path: string) => {
-    console.log("Card clicked, navigating to:", path);
-    navigate(path);
-  };
 
   return (
     <SidebarProvider>
@@ -105,8 +82,8 @@ const Dashboard = () => {
                 {stats.map((stat) => (
                   <Card 
                     key={stat.name}
-                    className="cursor-pointer transition-all hover:shadow-md hover:bg-gray-50"
-                    onClick={() => handleCardClick(stat.path)}
+                    className="cursor-pointer transition-all hover:shadow-md"
+                    onClick={() => navigate(stat.path)}
                   >
                     <CardContent className="flex items-center p-6">
                       <div className="p-2 rounded-full bg-gray-100 mr-4">
