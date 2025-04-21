@@ -5,45 +5,37 @@ const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes in milliseconds
 let inactivityTimer: NodeJS.Timeout;
 let lastActivity = Date.now();
 
-// Track if we're in focus or not
-let isWindowFocused = true;
-
-const resetTimer = () => {
-  clearTimeout(inactivityTimer);
-  lastActivity = Date.now();
+// Track user activity without relying on focus/blur events for resets
+export const initializeSessionTimeout = () => {
+  // Only track user activity for timeout purposes
+  const updateActivity = () => {
+    lastActivity = Date.now();
+  };
   
-  inactivityTimer = setTimeout(async () => {
+  // Set up inactivity check on a fixed interval
+  const checkInactivity = () => {
     const timeSinceLastActivity = Date.now() - lastActivity;
     if (timeSinceLastActivity >= INACTIVITY_TIMEOUT) {
-      await supabase.auth.signOut();
+      supabase.auth.signOut();
     }
-  }, INACTIVITY_TIMEOUT);
-};
-
-export const initializeSessionTimeout = () => {
-  // Only update focus state without resetting timer
-  window.addEventListener('focus', () => {
-    isWindowFocused = true;
-  });
+  };
   
-  window.addEventListener('blur', () => {
-    isWindowFocused = false;
-  });
-  
-  // Reset timer on user activity, but without tying it to window focus
+  // Update last activity on user interactions
   ['mousedown', 'keydown', 'touchstart', 'scroll'].forEach(event => {
-    window.addEventListener(event, resetTimer);
+    window.addEventListener(event, updateActivity);
   });
   
-  // Initialize timer
-  resetTimer();
+  // Check for inactivity periodically instead of using setTimeout
+  // This approach is more resilient to tab switching
+  const intervalTimer = setInterval(checkInactivity, 60000); // Check every minute
+  
+  // Initialize activity timestamp
+  updateActivity();
   
   return () => {
     ['mousedown', 'keydown', 'touchstart', 'scroll'].forEach(event => {
-      window.removeEventListener(event, resetTimer);
+      window.removeEventListener(event, updateActivity);
     });
-    window.removeEventListener('focus', () => { isWindowFocused = true; });
-    window.removeEventListener('blur', () => { isWindowFocused = false; });
-    clearTimeout(inactivityTimer);
+    clearInterval(intervalTimer);
   };
 };
