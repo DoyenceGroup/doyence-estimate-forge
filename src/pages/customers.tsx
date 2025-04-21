@@ -40,8 +40,8 @@ const sortOptions = [
   { value: "updated_at", label: "Last Modified" },
 ];
 
+// Updated leadSourceOptions: Removed "Referral"
 const leadSourceOptions = [
-  { value: "Referral", label: "Referral" },
   { value: "Word of Mouth", label: "Word of Mouth" },
   { value: "Website", label: "Website" },
   { value: "Facebook", label: "Facebook" },
@@ -55,7 +55,7 @@ const leadSourceOptions = [
 ];
 
 const socialMediaSources = ["Facebook", "Instagram", "LinkedIn", "Social Media"];
-const referralSources = ["Referral", "Word of Mouth"];
+const referralSources = ["Word of Mouth", "Referral"];
 const advertisingSources = ["Car Branding", "House Branding"];
 const otherSources = ["Other"];
 
@@ -196,21 +196,16 @@ const Customers = () => {
               break;
             }
             
-            if (selectedSource === "Referral" && referralSources.includes(customerSource)) {
-              matchesSelectedSource = true;
-              break;
-            }
-            
             if (selectedSource === "Word of Mouth" && referralSources.includes(customerSource)) {
               matchesSelectedSource = true;
               break;
             }
             
             if (selectedSource === "Other" && 
-                (!customerSource || 
-                 (!leadSourceOptions.some(opt => opt.value === customerSource) && 
-                  customerSource !== "Car Branding" && 
-                  customerSource !== "House Branding"))) {
+              (!customerSource || 
+               (!leadSourceOptions.some(opt => opt.value === customerSource) && 
+                customerSource !== "Car Branding" && 
+                customerSource !== "House Branding"))) {
               matchesSelectedSource = true;
               break;
             }
