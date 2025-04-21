@@ -151,40 +151,44 @@ const Customers = () => {
       .filter((customer) => {
         // Lead source filter
         if (filterLeadSource && customer.lead_source !== filterLeadSource) return false;
+        
         // Date added filter
         if (
           filterDateAdded[0] &&
-          new Date(customer.created_at) < filterDateAdded[0]
+          new Date(customer.created_at) < new Date(filterDateAdded[0])
         )
           return false;
         if (
           filterDateAdded[1] &&
-          new Date(customer.created_at) > filterDateAdded[1]
+          new Date(customer.created_at) > new Date(filterDateAdded[1])
         )
           return false;
+        
         // Date modified filter
         if (
           filterDateModified[0] &&
-          new Date(customer.updated_at) < filterDateModified[0]
+          new Date(customer.updated_at) < new Date(filterDateModified[0])
         )
           return false;
         if (
           filterDateModified[1] &&
-          new Date(customer.updated_at) > filterDateModified[1]
+          new Date(customer.updated_at) > new Date(filterDateModified[1])
         )
           return false;
+        
         // Search filter: match by name, last_name, email, phone
         const searchLower = search.toLowerCase();
         return (
           !search ||
           customer.name.toLowerCase().includes(searchLower) ||
           customer.last_name.toLowerCase().includes(searchLower) ||
-          customer.emails.some((e) => e.toLowerCase().includes(searchLower)) ||
-          customer.cell_numbers.some((n) => n.toLowerCase().includes(searchLower))
+          (customer.emails && customer.emails.some((e) => e.toLowerCase().includes(searchLower))) ||
+          (customer.cell_numbers && customer.cell_numbers.some((n) => n.toLowerCase().includes(searchLower)))
         );
       })
       .sort((a, b) => {
         let valA: any, valB: any;
+        
         if (sortBy === "name") {
           valA = a.name?.toLowerCase();
           valB = b.name?.toLowerCase();
@@ -198,6 +202,7 @@ const Customers = () => {
           valA = new Date(a.updated_at).getTime();
           valB = new Date(b.updated_at).getTime();
         }
+        
         if (valA === valB) return 0;
         if (sortDir === "asc") return valA > valB ? 1 : -1;
         else return valA < valB ? 1 : -1;
@@ -238,6 +243,7 @@ const Customers = () => {
               New Customer
             </Button>
           </div>
+          
           {/* Controls: Search/filter/sort */}
           <div className="mb-4 flex flex-col md:flex-row md:items-center gap-3">
             <div className="relative w-full md:w-64">
@@ -281,7 +287,7 @@ const Customers = () => {
                     <Filter className="w-4 h-4 mr-2" /> Filters
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent align="start" className="w-80">
+                <PopoverContent align="start" className="w-80 bg-background">
                   <div className="flex flex-col gap-4">
                     {/* Lead Source */}
                     <div>
@@ -308,7 +314,7 @@ const Customers = () => {
                             {renderDateLabel(filterDateAdded)}
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent align="start" className="w-auto p-0">
+                        <PopoverContent align="start" className="w-auto p-0 bg-background">
                           <Calendar
                             mode="range"
                             selected={{
@@ -335,7 +341,7 @@ const Customers = () => {
                             {renderDateLabel(filterDateModified)}
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent align="start" className="w-auto p-0">
+                        <PopoverContent align="start" className="w-auto p-0 bg-background">
                           <Calendar
                             mode="range"
                             selected={{
@@ -602,4 +608,3 @@ const Customers = () => {
 };
 
 export default Customers;
-
