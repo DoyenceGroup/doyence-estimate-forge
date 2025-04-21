@@ -19,6 +19,10 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
+import { CustomerFilters } from "@/components/customers/CustomerFilters";
+import { CustomerList } from "@/components/customers/CustomerList";
+import { CustomerDetails } from "@/components/customers/CustomerDetails";
+import { leadSourceOptions } from "@/components/customers/leadSourceOptions";
 
 type Customer = {
   id: string;
@@ -358,104 +362,17 @@ const Customers = () => {
                   <ArrowDown className="w-4 h-4" />
                 )}
               </Button>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="ml-2">
-                    <Filter className="w-4 h-4 mr-2" /> 
-                    Filters
-                    {hasActiveFilters && (
-                      <span className="ml-1 rounded-full bg-primary w-2 h-2"></span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="start" className="w-80 bg-background">
-                  <div className="flex flex-col gap-4">
-                    <div>
-                      <h4 className="font-medium mb-2">Lead Sources</h4>
-                      <div className="space-y-2 max-h-40 overflow-y-auto">
-                        {leadSourceOptions.map(option => (
-                          <div key={option.value} className="flex items-center space-x-2">
-                            <Checkbox 
-                              id={`lead-source-${option.value}`} 
-                              checked={selectedLeadSources.includes(option.value)}
-                              onCheckedChange={() => toggleLeadSourceFilter(option.value)}
-                            />
-                            <label 
-                              htmlFor={`lead-source-${option.value}`}
-                              className="text-sm cursor-pointer"
-                            >
-                              {option.label}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs mb-1 text-muted-foreground">Date Added</label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className="w-full">
-                            {renderDateLabel(filterDateAdded)}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent align="start" className="w-auto p-0 bg-background">
-                          <Calendar
-                            mode="range"
-                            selected={{
-                              from: filterDateAdded[0],
-                              to: filterDateAdded[1],
-                            }}
-                            onSelect={(range) => setFilterDateAdded([range?.from, range?.to])}
-                            className={cn("p-3 pointer-events-auto")}
-                          />
-                          {(filterDateAdded[0] || filterDateAdded[1]) && (
-                            <Button type="button" size="sm" variant="link" onClick={() => setFilterDateAdded([undefined, undefined])}>
-                              Clear
-                            </Button>
-                          )}
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    <div>
-                      <label className="block text-xs mb-1 text-muted-foreground">Last Modified</label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className="w-full">
-                            {renderDateLabel(filterDateModified)}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent align="start" className="w-auto p-0 bg-background">
-                          <Calendar
-                            mode="range"
-                            selected={{
-                              from: filterDateModified[0],
-                              to: filterDateModified[1],
-                            }}
-                            onSelect={(range) => setFilterDateModified([range?.from, range?.to])}
-                            className={cn("p-3 pointer-events-auto")}
-                          />
-                          {(filterDateModified[0] || filterDateModified[1]) && (
-                            <Button type="button" size="sm" variant="link" onClick={() => setFilterDateModified([undefined, undefined])}>
-                              Clear
-                            </Button>
-                          )}
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    {hasActiveFilters && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={resetFilters}
-                        className="mt-2"
-                      >
-                        <X className="w-4 h-4 mr-2" />
-                        Clear All Filters
-                      </Button>
-                    )}
-                  </div>
-                </PopoverContent>
-              </Popover>
+              <CustomerFilters
+                hasActiveFilters={hasActiveFilters}
+                selectedLeadSources={selectedLeadSources}
+                toggleLeadSourceFilter={toggleLeadSourceFilter}
+                filterDateAdded={filterDateAdded}
+                setFilterDateAdded={setFilterDateAdded}
+                filterDateModified={filterDateModified}
+                setFilterDateModified={setFilterDateModified}
+                resetFilters={resetFilters}
+                renderDateLabel={renderDateLabel}
+              />
             </div>
           </div>
           
@@ -468,205 +385,25 @@ const Customers = () => {
               <p className="text-lg text-muted-foreground">No customers found. Create your first customer!</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {filteredSortedCustomers.map((customer) => (
-                <Card key={customer.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => viewCustomerDetails(customer)}>
-                  <CardHeader className="flex flex-row justify-between items-center">
-                    <CardTitle>
-                      {customer.name} {customer.last_name}
-                    </CardTitle>
-                    <div className="flex space-x-1">
-                      <Button 
-                        size="icon" 
-                        variant="ghost" 
-                        onClick={(e) => { 
-                          e.stopPropagation(); 
-                          setEditing(customer); 
-                          setOpen(true); 
-                        }} 
-                        aria-label="Edit customer"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button 
-                            size="icon" 
-                            variant="ghost" 
-                            onClick={(e) => e.stopPropagation()} 
-                            aria-label="Delete customer"
-                          >
-                            <Trash2 className="w-4 h-4 text-red-500" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone. This will permanently delete the customer
-                              and all associated data.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction 
-                              className="bg-red-600 hover:bg-red-700"
-                              onClick={() => handleDeleteCustomer(customer.id)}
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="mb-2">
-                      <span className="font-semibold">Phone(s): </span>
-                      {customer.cell_numbers && customer.cell_numbers.length > 0 ? customer.cell_numbers.join(", ") : "None provided"}
-                    </div>
-                    <div className="mb-2">
-                      <span className="font-semibold">Email(s): </span>
-                      {customer.emails && customer.emails.length > 0 ? customer.emails.join(", ") : "None provided"}
-                    </div>
-                    <div className="mb-2">
-                      <span className="font-semibold">Address: </span>
-                      {customer.address || "None provided"}
-                    </div>
-                    <div>
-                      <span className="font-semibold">Lead Source: </span>
-                      {customer.lead_source || "None specified"}
-                      {customer.lead_source === "Other" && customer.lead_source_description && (
-                        <span className="ml-1 text-sm text-muted-foreground">
-                          ({customer.lead_source_description})
-                        </span>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <CustomerList
+              customers={filteredSortedCustomers}
+              viewCustomerDetails={viewCustomerDetails}
+              setEditing={setEditing}
+              setOpen={setOpen}
+              handleDeleteCustomer={handleDeleteCustomer}
+            />
           )}
         </>
       ) : (
-        <>
-          <div className="mb-6">
-            <div className="flex items-center mb-4">
-              <Button variant="ghost" className="mr-2" onClick={() => setViewMode('list')}>
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Customers
-              </Button>
-              <h1 className="text-2xl font-bold">
-                {selectedCustomer?.name} {selectedCustomer?.last_name}
-              </h1>
-            </div>
-            
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="mb-4">
-                <TabsTrigger value="info">Customer Info</TabsTrigger>
-                <TabsTrigger value="notes">Notes</TabsTrigger>
-                <TabsTrigger value="projects">Projects</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="info" className="space-y-4">
-                <Card>
-                  <CardHeader className="flex flex-row justify-between items-center">
-                    <CardTitle>Customer Information</CardTitle>
-                    <div className="flex space-x-1">
-                      <Button 
-                        size="icon" 
-                        variant="ghost" 
-                        onClick={() => { 
-                          setEditing(selectedCustomer); 
-                          setOpen(true); 
-                        }} 
-                        aria-label="Edit customer"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button 
-                            size="icon" 
-                            variant="ghost" 
-                            aria-label="Delete customer"
-                          >
-                            <Trash2 className="w-4 h-4 text-red-500" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone. This will permanently delete the customer
-                              and all associated data.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction 
-                              className="bg-red-600 hover:bg-red-700"
-                              onClick={() => {
-                                if (selectedCustomer) {
-                                  handleDeleteCustomer(selectedCustomer.id);
-                                }
-                              }}
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground mb-1">Name</p>
-                        <p>{selectedCustomer?.name} {selectedCustomer?.last_name}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground mb-1">Address</p>
-                        <p>{selectedCustomer?.address || "None provided"}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground mb-1">Phone Number(s)</p>
-                        <p>{selectedCustomer?.cell_numbers?.length ? selectedCustomer?.cell_numbers.join(", ") : "None provided"}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground mb-1">Email(s)</p>
-                        <p>{selectedCustomer?.emails?.length ? selectedCustomer?.emails.join(", ") : "None provided"}</p>
-                      </div>
-                      <div className="col-span-1 md:col-span-2">
-                        <p className="text-sm font-medium text-muted-foreground mb-1">Lead Source</p>
-                        <p>
-                          {selectedCustomer?.lead_source || "None specified"}
-                          {selectedCustomer?.lead_source === "Other" && selectedCustomer?.lead_source_description && (
-                            <span className="ml-1 text-muted-foreground">
-                              ({selectedCustomer.lead_source_description})
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="notes">
-                {selectedCustomer && (
-                  <CustomerNotes customerId={selectedCustomer.id} />
-                )}
-              </TabsContent>
-              
-              <TabsContent value="projects">
-                {selectedCustomer && (
-                  <CustomerProjects customerId={selectedCustomer.id} />
-                )}
-              </TabsContent>
-            </Tabs>
-          </div>
-        </>
+        <CustomerDetails
+          selectedCustomer={selectedCustomer}
+          setViewMode={setViewMode}
+          setEditing={setEditing}
+          setOpen={setOpen}
+          handleDeleteCustomer={handleDeleteCustomer}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+        />
       )}
       
       <Dialog open={open} onOpenChange={setOpen}>
