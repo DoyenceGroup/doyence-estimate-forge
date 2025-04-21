@@ -118,6 +118,41 @@ export type Database = {
           },
         ]
       }
+      customer_notes: {
+        Row: {
+          author_id: string
+          created_at: string | null
+          customer_id: string
+          id: string
+          note: string
+          updated_at: string | null
+        }
+        Insert: {
+          author_id: string
+          created_at?: string | null
+          customer_id: string
+          id?: string
+          note: string
+          updated_at?: string | null
+        }
+        Update: {
+          author_id?: string
+          created_at?: string | null
+          customer_id?: string
+          id?: string
+          note?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_notes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           address: string | null
@@ -251,6 +286,44 @@ export type Database = {
           website?: string | null
         }
         Relationships: []
+      }
+      projects: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          customer_id: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          customer_id: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          customer_id?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
