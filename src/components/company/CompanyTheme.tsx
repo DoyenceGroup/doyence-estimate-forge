@@ -5,21 +5,20 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Palette } from "lucide-react";
 import PaintColorPicker from "./PaintColorPicker";
 
-// Removed the TAILWIND_PALETTE array as we're using the MS Paint style picker
-
-const getDefaultColor = () => "#3b82f6"; // Default to a blue color
-
 const CompanyTheme = () => {
-  const [selectedColor, setSelectedColor] = useState(getDefaultColor());
+  const { themeColor, setThemeColor } = useTheme();
+  const [selectedColor, setSelectedColor] = useState(themeColor || "#3b82f6");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
   const handleSaveTheme = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (!user?.id) {
       toast({
         title: "Authentication error",
@@ -28,9 +27,13 @@ const CompanyTheme = () => {
       });
       return;
     }
+    
     setIsLoading(true);
+    
     try {
-      // Future: Save the theme to user's company
+      // Update global theme
+      setThemeColor(selectedColor);
+      
       toast({
         title: "Theme updated",
         description: `Your company theme color has been updated to ${selectedColor}.`,
@@ -65,7 +68,6 @@ const CompanyTheme = () => {
               <p className="text-sm text-gray-500 mb-4">
                 Select or pick your company brand color below.
               </p>
-              {/* MS Paint style color picker */}
               <PaintColorPicker
                 value={selectedColor}
                 onChange={setSelectedColor}

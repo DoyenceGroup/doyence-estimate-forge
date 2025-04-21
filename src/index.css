@@ -36,6 +36,11 @@
     --ring: 217 71% 53%;
 
     --radius: 0.5rem;
+    
+    /* Custom theme variables */
+    --theme-color: #3b82f6;
+    --theme-color-lighter: #3b82f620;
+    --theme-color-darker: #3b82f6;
   }
 
   .dark {
@@ -84,5 +89,26 @@
   
   .font-montserrat {
     font-family: 'Montserrat', sans-serif;
+  }
+  
+  /* Theme utility classes */
+  .text-theme {
+    color: var(--theme-color);
+  }
+  
+  .bg-theme {
+    background-color: var(--theme-color);
+  }
+  
+  .border-theme {
+    border-color: var(--theme-color);
+  }
+  
+  .hover-theme:hover {
+    background-color: var(--theme-color-darker);
+  }
+  
+  .bg-theme-light {
+    background-color: var(--theme-color-lighter);
   }
 }

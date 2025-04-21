@@ -1,6 +1,7 @@
 
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { useEffect } from "react";
 import { initializeSessionTimeout } from "@/utils/sessionTimeout";
 import Dashboard from "@/pages/dashboard";
@@ -109,8 +110,10 @@ function AppWithProviders() {
 
   return (
     <AuthProvider>
-      <AnimatedRoutes />
-      <Toaster />
+      <ThemeProvider>
+        <AnimatedRoutes />
+        <Toaster />
+      </ThemeProvider>
     </AuthProvider>
   );
 }

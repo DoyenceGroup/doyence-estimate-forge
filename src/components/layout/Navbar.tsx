@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Menu, LogOut, Settings } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface NavbarProps {
@@ -20,6 +21,7 @@ interface NavbarProps {
 
 const Navbar = ({ onMobileMenuToggle }: NavbarProps) => {
   const { user, profile, signOut } = useAuth();
+  const { themeColor } = useTheme();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -45,7 +47,10 @@ const Navbar = ({ onMobileMenuToggle }: NavbarProps) => {
               <Menu size={24} />
             </button>
             <Link to="/dashboard" className="flex items-center">
-              <span className="text-xl font-montserrat font-bold text-primary-700">
+              <span 
+                className="text-xl font-montserrat font-bold"
+                style={{ color: themeColor }}
+              >
                 Doyence Estimating
               </span>
             </Link>
@@ -64,7 +69,7 @@ const Navbar = ({ onMobileMenuToggle }: NavbarProps) => {
                       {profile?.profile_photo_url ? (
                         <AvatarImage src={profile.profile_photo_url} alt="Profile" />
                       ) : (
-                        <AvatarFallback>
+                        <AvatarFallback style={{ backgroundColor: themeColor + '20', color: themeColor }}>
                           {profile?.first_name?.charAt(0) ?? user.email?.charAt(0) ?? "U"}
                         </AvatarFallback>
                       )}
@@ -100,7 +105,11 @@ const Navbar = ({ onMobileMenuToggle }: NavbarProps) => {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button size="sm" asChild>
+              <Button 
+                size="sm" 
+                asChild
+                style={{ backgroundColor: themeColor }}
+              >
                 <Link to="/login">Log In</Link>
               </Button>
             )}
