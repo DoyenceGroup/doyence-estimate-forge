@@ -40,6 +40,8 @@
     /* Custom theme variables */
     --theme-color: #3b82f6;
     --theme-color-lighter: #3b82f620;
+    --theme-color-light: #3b82f640;
+    --theme-color-medium: #3b82f670;
     --theme-color-darker: #3b82f6;
   }
 
@@ -111,4 +113,25 @@
   .bg-theme-light {
     background-color: var(--theme-color-lighter);
   }
+  
+  .bg-theme-medium {
+    background-color: var(--theme-color-medium);
+  }
+  
+  /* Override shadcn button styles to use theme color */
+  :where(.css-dev-only-do-not-override-xu9wm8).bg-primary, 
+  .bg-primary {
+    background-color: var(--theme-color) !important;
+  }
+  
+  :where(.css-dev-only-do-not-override-xu9wm8).hover\:bg-primary\/90:hover, 
+  .hover\:bg-primary\/90:hover {
+    background-color: var(--theme-color-darker) !important;
+  }
+  
+  /* Button focus and active states */
+  .focus-visible\:ring-primary:focus-visible {
+    --tw-ring-color: var(--theme-color-medium) !important;
+  }
 }
+

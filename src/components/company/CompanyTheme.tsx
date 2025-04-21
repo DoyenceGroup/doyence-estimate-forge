@@ -80,12 +80,10 @@ const CompanyTheme = () => {
                   <div className="mb-4 md:mb-0">
                     <h4 className="font-medium">Button Example</h4>
                     <div className="mt-2 flex space-x-2">
-                      <Button
-                        style={{ backgroundColor: selectedColor, color: "#fff", borderColor: "#fff" }}
-                      >
+                      <Button>
                         Primary Button
                       </Button>
-                      <Button variant="outline" style={{ borderColor: selectedColor, color: selectedColor }}>
+                      <Button variant="outline" className="border-theme text-theme">
                         Outline
                       </Button>
                     </div>
@@ -93,14 +91,11 @@ const CompanyTheme = () => {
                   <div>
                     <h4 className="font-medium">Text Example</h4>
                     <div className="mt-2">
-                      <span
-                        className="font-medium"
-                        style={{ color: selectedColor }}
-                      >
+                      <span className="font-medium text-theme">
                         This text uses your primary color
                       </span>
                     </div>
-                    <div className="mt-2 p-2 rounded" style={{ backgroundColor: selectedColor + '10' }}>
+                    <div className="mt-2 p-2 rounded bg-theme-light">
                       <span>Background tint example</span>
                     </div>
                   </div>
@@ -110,8 +105,7 @@ const CompanyTheme = () => {
           </div>
         </CardContent>
         <CardFooter>
-          <Button type="submit" disabled={isLoading}
-            style={{ backgroundColor: selectedColor, color: "#fff" }}>
+          <Button type="submit" disabled={isLoading}>
             {isLoading ? "Saving..." : "Save Theme"}
           </Button>
         </CardFooter>
