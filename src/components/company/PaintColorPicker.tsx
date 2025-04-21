@@ -35,7 +35,7 @@ interface PaintColorPickerProps {
 export default function PaintColorPicker({ value, onChange }: PaintColorPickerProps) {
   const [hexInput, setHexInput] = useState(value || "#3b82f6");
   const [showSpectrum, setShowSpectrum] = useState(false);
-  // Add a refreshKey to force canvas redraw
+  // For canvas redraw
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
@@ -47,22 +47,24 @@ export default function PaintColorPicker({ value, onChange }: PaintColorPickerPr
 
   // --- Color spectrum logic ---
   const spectrumRef = useRef<HTMLCanvasElement>(null);
-  const [spectrumPos, setSpectrumPos] = useState<{ x: number; y: number }>({ x: 120, y: 10 }); // somewhere near blue, not corner
+  const [spectrumPos, setSpectrumPos] = useState<{ x: number; y: number }>({ x: 120, y: 10 }); 
   const [dragging, setDragging] = useState(false);
 
-  // Force redraw when component mounts and when refreshKey changes
+  // Draw spectrum on mount and when refresh is triggered
   useEffect(() => {
-    drawSpectrum();
-    
-    // Force a second draw after a short delay to ensure it renders properly
-    const timer = setTimeout(() => {
+    const drawCanvas = () => {
       drawSpectrum();
-    }, 50);
+    };
+    
+    drawCanvas();
+    
+    // Force a second draw after a delay to ensure it renders properly
+    const timer = setTimeout(drawCanvas, 50);
     
     return () => clearTimeout(timer);
   }, [refreshKey]);
 
-  // Immediately trigger a redraw on first render
+  // Initial render trigger
   useEffect(() => {
     setRefreshKey(prev => prev + 1);
   }, []);
@@ -73,52 +75,49 @@ export default function PaintColorPicker({ value, onChange }: PaintColorPickerPr
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Clear the canvas first
+    // Clear the canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Create a gradient (Hue left-right) with super-vivid color stops
     const w = canvas.width, h = canvas.height;
-    const gradH = ctx.createLinearGradient(0, 0, w, 0);
     
-    // Use ultra-saturated vivid colors for maximum vibrancy
+    // Create ultra-vivid horizontal hue gradient
+    const gradH = ctx.createLinearGradient(0, 0, w, 0);
     gradH.addColorStop(0, "#FF0000");      // Pure red
     gradH.addColorStop(0.17, "#FF8000");   // Bright orange
-    gradH.addColorStop(0.33, "#00FF00");   // Pure green
-    gradH.addColorStop(0.5, "#00FFFF");    // Cyan
-    gradH.addColorStop(0.67, "#0080FF");   // Bright blue
+    gradH.addColorStop(0.33, "#FFFF00");   // Pure yellow
+    gradH.addColorStop(0.5, "#00FF00");    // Pure green
+    gradH.addColorStop(0.67, "#0000FF");   // Pure blue
     gradH.addColorStop(0.83, "#8000FF");   // Vivid purple
     gradH.addColorStop(1, "#FF00FF");      // Magenta
     
     ctx.fillStyle = gradH;
     ctx.fillRect(0, 0, w, h);
 
-    // White gradient top (less white to preserve more saturation)
+    // White gradient for top half
     const gradW = ctx.createLinearGradient(0, 0, 0, h * 0.5);
-    gradW.addColorStop(0, "rgba(255,255,255,0.8)");
+    gradW.addColorStop(0, "rgba(255,255,255,0.7)");
     gradW.addColorStop(1, "rgba(255,255,255,0)");
     ctx.fillStyle = gradW;
     ctx.fillRect(0, 0, w, h * 0.5);
 
-    // Black gradient bottom
+    // Black gradient for bottom half
     const gradB = ctx.createLinearGradient(0, h * 0.5, 0, h);
     gradB.addColorStop(0, "rgba(0,0,0,0)");
-    gradB.addColorStop(1, "rgba(0,0,0,1)");
+    gradB.addColorStop(1, "rgba(0,0,0,0.9)");
     ctx.fillStyle = gradB;
     ctx.fillRect(0, h * 0.5, w, h * 0.5);
-    
-    console.log("Spectrum canvas redrawn with vivid colors");
   }
 
   function getColorAtPosition(x: number, y: number) {
     const canvas = spectrumRef.current;
-    if (!canvas) return "#000";
+    if (!canvas) return "#000000";
     const ctx = canvas.getContext("2d");
-    if (!ctx) return "#000";
+    if (!ctx) return "#000000";
     const pixel = ctx.getImageData(x, y, 1, 1).data;
     return rgbToHex(pixel[0], pixel[1], pixel[2]);
   }
 
-  // Drag handlers
+  // Spectrum interaction handlers
   function handleSpectrumDown(
     e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
   ) {
@@ -137,8 +136,10 @@ export default function PaintColorPicker({ value, onChange }: PaintColorPickerPr
     setHexInput(color);
     onChange(color);
   }
+
   useEffect(() => {
     if (!dragging) return;
+    
     function move(e: MouseEvent | TouchEvent) {
       const canvas = spectrumRef.current;
       if (!canvas) return;
@@ -150,25 +151,31 @@ export default function PaintColorPicker({ value, onChange }: PaintColorPickerPr
       } else if ("clientX" in e) {
         x = Math.max(0, Math.min(rect.width, (e as MouseEvent).clientX - rect.left));
         y = Math.max(0, Math.min(rect.height, (e as MouseEvent).clientY - rect.top));
+      } else {
+        return;
       }
       setSpectrumPos({ x, y });
       const color = getColorAtPosition(x, y);
       setHexInput(color);
       onChange(color);
     }
-    function up() { setDragging(false); }
+    
+    function up() { 
+      setDragging(false); 
+    }
+    
     window.addEventListener("mousemove", move);
     window.addEventListener("touchmove", move as any, { passive: false });
     window.addEventListener("mouseup", up);
     window.addEventListener("touchend", up as any);
+    
     return () => {
       window.removeEventListener("mousemove", move);
       window.removeEventListener("touchmove", move as any);
       window.removeEventListener("mouseup", up);
       window.removeEventListener("touchend", up as any);
     };
-  }, [dragging]);
-  // -----
+  }, [dragging, onChange]);
 
   return (
     <div>
