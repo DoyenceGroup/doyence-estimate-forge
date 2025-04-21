@@ -2,10 +2,10 @@
 import React, { useState, useRef, useEffect } from "react";
 
 const PAINT_COLORS = [
-  // Rows of colors (like MS Paint)
-  ["#ffffff", "#c0c0c0", "#808080", "#000000", "#ff0000", "#800000", "#ffff00", "#808000", "#00ff00", "#008000", "#00ffff", "#008080", "#0000ff", "#000080", "#ff00ff", "#800080"],
-  ["#f4cccc", "#fce5cd", "#fff2cc", "#d9ead3", "#d0e0e3", "#c9daf8", "#cfe2f3", "#ead1dc", "#ea9999", "#f9cb9c", "#ffe599", "#b6d7a8", "#a2c4c9", "#a4c2f4", "#9fc5e8", "#d9d2e9"],
-  ["#e6b8af", "#f4cccc", "#fff2cc", "#d0e0e3", "#b4a7d6", "#d9d2e9", "#cfe2f3", "#c9daf8", "#cfe2f3", "#ead1dc", "#f6b26b", "#93c47d", "#ffd966", "#6fa8dc", "#76a5af", "#a4c2f4"],
+  // Rows of more vivid colors (like MS Paint but more vibrant)
+  ["#ffffff", "#d4d4d8", "#a1a1aa", "#000000", "#ef4444", "#b91c1c", "#fde68a", "#ca8a04", "#22c55e", "#166534", "#2dd4bf", "#0f766e", "#3b82f6", "#1e40af", "#db2777", "#831843"],
+  ["#f9a8d4", "#fbcfe8", "#fde68a", "#86efac", "#5eead4", "#38bdf8", "#60a5fa", "#818cf8", "#e879f9", "#e0e7ff", "#a78bfa", "#c4b5fd", "#f472b6", "#f43f5e", "#f97316", "#ea580c"],
+  ["#e0f2fe", "#bae6fd", "#7dd3fc", "#38bdf8", "#0ea5e9", "#0284c7", "#2563eb", "#4f46e5", "#8b5cf6", "#a78bfa", "#c084fc", "#ddbdfc", "#ec4899", "#db2777", "#f43f5e", "#be123c"],
 ];
 
 function hexToRgb(hex: string) {
@@ -225,3 +225,4 @@ export default function PaintColorPicker({ value, onChange }: PaintColorPickerPr
     </div>
   );
 }
+
