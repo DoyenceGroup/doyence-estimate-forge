@@ -4,19 +4,6 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, FileText, Users, BarChart, Calculator } from 'lucide-react';
 
 const Index = () => {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    // Check if user is already logged in
-    const userData = localStorage.getItem("doyence_user");
-    if (userData) {
-      const user = JSON.parse(userData);
-      if (user.profileCompleted) {
-        navigate("/dashboard");
-      }
-    }
-  }, [navigate]);
-
   return (
     <div className="flex flex-col min-h-screen">
       {/* Navigation */}

@@ -31,9 +31,14 @@ const Dashboard = () => {
   // Fetch stats from Supabase
   useEffect(() => {
     const fetchStats = async () => {
-      if (!user?.id) return;
+      if (!user?.id) {
+        console.log("No user ID found, skipping stats fetch");
+        return;
+      }
 
       try {
+        console.log("Fetching customer count for user:", user.id);
+        
         // Fetch customer count
         const { count: customerCount, error: customerError } = await supabase
           .from('customers')
@@ -48,6 +53,8 @@ const Dashboard = () => {
           });
           return;
         }
+
+        console.log("Customer count fetched:", customerCount);
 
         // Update the stats array with the actual customer count
         setStats(currentStats => 
@@ -72,7 +79,7 @@ const Dashboard = () => {
   }, [user?.id]);
 
   const handleCardClick = (path: string) => {
-    console.log("Navigating to:", path);
+    console.log("Card clicked, navigating to:", path);
     navigate(path);
   };
 
@@ -98,7 +105,7 @@ const Dashboard = () => {
                 {stats.map((stat) => (
                   <Card 
                     key={stat.name}
-                    className="cursor-pointer transition-all hover:shadow-md"
+                    className="cursor-pointer transition-all hover:shadow-md hover:bg-gray-50"
                     onClick={() => handleCardClick(stat.path)}
                   >
                     <CardContent className="flex items-center p-6">

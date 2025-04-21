@@ -15,11 +15,15 @@ const Login = () => {
   const isVerification = searchParams.get("verification") === "true";
 
   useEffect(() => {
+    console.log("Login page: Auth state -", { session, isLoading });
+    
     if (!isLoading) {
       setSessionChecked(true);
       if (session) {
-        console.log("Login page: user already logged in. Redirecting to dashboard...");
+        console.log("Login page: User already logged in. Redirecting to dashboard...");
         navigate("/dashboard", { replace: true });
+      } else {
+        console.log("Login page: No session found, showing login form");
       }
     }
   }, [session, isLoading, navigate]);
