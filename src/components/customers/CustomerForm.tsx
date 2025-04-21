@@ -58,7 +58,7 @@ export function CustomerForm({
   onSave,
   onCancel,
 }: CustomerFormProps) {
-  const [leadSource, setLeadSource] = useState(
+  const [leadSource, setLeadSource] = React.useState(
     customer?.lead_source || ""
   );
   const { toast } = useToast();
@@ -66,8 +66,8 @@ export function CustomerForm({
   const form = useForm<CustomerFormType>({
     defaultValues: customer
       ? {
-          name: customer.name,
-          last_name: customer.last_name,
+          name: customer.name ?? "",
+          last_name: customer.last_name ?? "",
           cell_numbers:
             customer.cell_numbers?.map((n: string) => ({ value: n })) ||
             [{ value: "" }],
@@ -113,6 +113,18 @@ export function CustomerForm({
 
   async function onSubmit(values: CustomerFormType) {
     try {
+      const userRes = await supabase.auth.getUser();
+      const userId = userRes.data.user?.id;
+
+      if (!userId) {
+        toast({
+          title: "User not found",
+          description: "You must be logged in.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const newCustomer = {
         name: values.name,
         last_name: values.last_name,
@@ -125,9 +137,9 @@ export function CustomerForm({
             ? values.lead_source_description
             : null,
       };
-      
+
       console.log("Saving customer:", newCustomer);
-      
+
       let result;
       if (customer) {
         result = await supabase
@@ -140,10 +152,10 @@ export function CustomerForm({
       } else {
         result = await supabase.from("customers").insert({
           ...newCustomer,
-          created_by: (await supabase.auth.getUser()).data.user?.id,
+          created_by: userId,
         });
       }
-      
+
       if (result.error) {
         console.error("Error saving customer:", result.error);
         toast({
@@ -153,7 +165,7 @@ export function CustomerForm({
         });
         return;
       }
-      
+
       onSave();
       reset();
     } catch (error) {
@@ -247,7 +259,6 @@ export function CustomerForm({
           </div>
           <FormMessage>
             {
-              // Show the first error message for cell_numbers
               errors.cell_numbers?.[0]?.value?.message as string
             }
           </FormMessage>
@@ -300,7 +311,6 @@ export function CustomerForm({
           </div>
           <FormMessage>
             {
-              // Show the first error message for emails
               errors.emails?.[0]?.value?.message as string
             }
           </FormMessage>
@@ -355,7 +365,7 @@ export function CustomerForm({
           )}
         />
 
-        {/* Description for "Other" */}
+        {/* Show description only if "Other" is selected */}
         {watchedLeadSource === "Other" && (
           <FormField
             control={control}

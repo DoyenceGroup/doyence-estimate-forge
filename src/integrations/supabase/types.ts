@@ -128,6 +128,7 @@ export type Database = {
           id: string
           last_name: string
           lead_source: string | null
+          lead_source_description: string | null
           name: string
           updated_at: string
         }
@@ -140,6 +141,7 @@ export type Database = {
           id?: string
           last_name: string
           lead_source?: string | null
+          lead_source_description?: string | null
           name: string
           updated_at?: string
         }
@@ -152,6 +154,7 @@ export type Database = {
           id?: string
           last_name?: string
           lead_source?: string | null
+          lead_source_description?: string | null
           name?: string
           updated_at?: string
         }
