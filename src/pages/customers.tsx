@@ -74,9 +74,10 @@ const Customers = () => {
       setLoading(true);
       if (!session?.user?.id) return;
       
-      // Fix: Use the correct typing for the RPC function call
-      // Cast the return value to string to avoid type recursion
-      const { data, error: companyIdError } = await supabase.rpc(
+      // Fix: Use explicit type annotation for the RPC function call to avoid recursive type instantiation
+      type GetCompanyIdResponse = string;
+      
+      const { data, error: companyIdError } = await supabase.rpc<GetCompanyIdResponse>(
         'get_effective_user_company_id'
       );
       
@@ -85,8 +86,8 @@ const Customers = () => {
         return;
       }
       
-      // Cast the data to string explicitly
-      const companyId = data as string;
+      // No need for explicit casting since we defined the return type correctly
+      const companyId = data;
 
       const { data: customersData, error } = await supabase
         .from("customers")
