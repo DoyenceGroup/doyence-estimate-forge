@@ -1,4 +1,3 @@
-
 import {
   createContext,
   useContext,
@@ -328,13 +327,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
       }
       
-      // Call the start_impersonation RPC function to set the session variable
-      const { data: impersonationResult, error: impersonationError } = await supabase.rpc('start_impersonation', {
-        target_user_id: userId
+      // Call the RPC function to impersonate user
+      const { data, error } = await supabase.rpc('admin_impersonate_user', {
+        user_id: userId
       });
       
-      if (impersonationError) {
-        throw impersonationError;
+      if (error) {
+        throw error;
       }
       
       // Fetch the impersonated user profile
@@ -410,13 +409,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     try {
       setIsLoading(true);
-
-      // End the impersonation session in the database
-      const { data: endResult, error: endError } = await supabase.rpc('end_impersonation');
-      
-      if (endError) {
-        throw endError;
-      }
       
       // Restore original user and session
       setUser(originalUser);

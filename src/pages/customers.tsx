@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -74,25 +73,9 @@ const Customers = () => {
       setLoading(true);
       if (!session?.user?.id) return;
       
-      // Fix: Use explicit type annotation for the RPC function call to avoid recursive type instantiation
-      type GetCompanyIdResponse = string;
-      
-      const { data, error: companyIdError } = await supabase.rpc<GetCompanyIdResponse>(
-        'get_effective_user_company_id'
-      );
-      
-      if (companyIdError) {
-        console.error("Error getting effective user company ID:", companyIdError);
-        return;
-      }
-      
-      // No need for explicit casting since we defined the return type correctly
-      const companyId = data;
-
-      const { data: customersData, error } = await supabase
+      const { data, error } = await supabase
         .from("customers")
         .select("*")
-        .eq("company_id", companyId)
         .order("created_at", { ascending: false });
       
       if (error) {
@@ -104,7 +87,7 @@ const Customers = () => {
         });
         return;
       }
-      setCustomers(customersData || []);
+      setCustomers(data || []);
     } catch (error) {
       console.error("Error in fetchCustomers:", error);
     } finally {
