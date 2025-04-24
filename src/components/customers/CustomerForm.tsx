@@ -75,10 +75,15 @@ export function CustomerForm({
 
   useEffect(() => {
     const fetchCompanyMembers = async () => {
+      if (!user?.company_id) {
+        console.error('Missing company ID for current user');
+        return;
+      }
+
       const { data: profileData, error } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name, company_id')
-        .eq('company_id', user?.company_id)
+        .select('id, first_name, last_name')
+        .eq('company_id', user.company_id)
         .order('first_name');
 
       if (error) {
@@ -91,6 +96,16 @@ export function CustomerForm({
         first_name: profile.first_name,
         last_name: profile.last_name
       })) || [];
+
+      const currentUserIncluded = members.some(member => member.user_id === user.id);
+      
+      if (!currentUserIncluded && user.id) {
+        members.push({
+          user_id: user.id,
+          first_name: user.first_name || "Current",
+          last_name: user.last_name || "User"
+        });
+      }
 
       setCompanyMembers(members);
     };
