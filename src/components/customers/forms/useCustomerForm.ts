@@ -1,12 +1,12 @@
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
-import { CustomerFormType, CompanyMember } from "./CustomerFormTypes";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import type { CustomerFormType, CompanyMember } from "./CustomerFormTypes";
 
-export const useCustomerForm = (customer: any, onSave: () => void) => {
+export const useCustomerForm = (customer?: any, onSave?: () => void) => {
   const [companyMembers, setCompanyMembers] = useState<CompanyMember[]>([]);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -43,21 +43,25 @@ export const useCustomerForm = (customer: any, onSave: () => void) => {
     control,
     handleSubmit,
     formState: { errors, isSubmitting },
+    reset,
     setValue,
     watch,
   } = form;
 
   const {
     fields: cellFields,
-    append: appendCell,
+    append: appendCellRaw,
     remove: removeCell,
   } = useFieldArray({ name: "cell_numbers", control });
-  
   const {
     fields: emailFields,
-    append: appendEmail,
+    append: appendEmailRaw,
     remove: removeEmail,
   } = useFieldArray({ name: "emails", control });
+
+  // Create wrapper functions to fix TypeScript errors
+  const appendCell = () => appendCellRaw({ value: "" });
+  const appendEmail = () => appendEmailRaw({ value: "" });
 
   const watchedLeadSource = watch("lead_source");
 
@@ -85,9 +89,12 @@ export const useCustomerForm = (customer: any, onSave: () => void) => {
         last_name: profile.last_name || ''
       })) || [];
 
+      // Check if current user is already included in the list
       const currentUserIncluded = members.some(member => member.user_id === user.id);
       
+      // If not, add current user to the list with proper name handling
       if (!currentUserIncluded && user.id) {
+        // Fetch current user profile to ensure we have the most up-to-date name
         const { data: currentUserProfile, error: userError } = await supabase
           .from('profiles')
           .select('first_name, last_name')
@@ -109,13 +116,16 @@ export const useCustomerForm = (customer: any, onSave: () => void) => {
         }
       }
 
+      console.log("Company members:", members);
       setCompanyMembers(members);
     };
 
     if (user?.company_id) {
       fetchCompanyMembers();
     } else {
+      // If no company_id, at least add the current user
       if (user?.id) {
+        // Fetch current user profile to ensure we have the most up-to-date name
         const fetchCurrentUserProfile = async () => {
           const { data: currentUserProfile, error } = await supabase
             .from('profiles')
@@ -124,12 +134,14 @@ export const useCustomerForm = (customer: any, onSave: () => void) => {
             .single();
             
           if (!error && currentUserProfile) {
+            console.log("Current user profile:", currentUserProfile);
             setCompanyMembers([{
               user_id: user.id,
               first_name: currentUserProfile.first_name || 'Unknown',
               last_name: currentUserProfile.last_name || 'User'
             }]);
           } else {
+            console.log("Using user object for name:", user);
             setCompanyMembers([{
               user_id: user.id,
               first_name: user.first_name || 'Unknown',
@@ -143,7 +155,7 @@ export const useCustomerForm = (customer: any, onSave: () => void) => {
     }
   }, [user]);
 
-  const onSubmit = async (values: CustomerFormType) => {
+  async function onSubmit(values: CustomerFormType) {
     try {
       const userRes = await supabase.auth.getUser();
       const userId = userRes.data.user?.id;
@@ -199,7 +211,8 @@ export const useCustomerForm = (customer: any, onSave: () => void) => {
         return;
       }
 
-      onSave();
+      if (onSave) onSave();
+      reset();
     } catch (error) {
       console.error("Error in onSubmit:", error);
       toast({
@@ -208,7 +221,7 @@ export const useCustomerForm = (customer: any, onSave: () => void) => {
         variant: "destructive",
       });
     }
-  };
+  }
 
   return {
     form,

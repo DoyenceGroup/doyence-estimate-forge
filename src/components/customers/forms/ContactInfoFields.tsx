@@ -61,7 +61,7 @@ export const ContactInfoFields: React.FC<ContactInfoFieldsProps> = ({
             <Button
               type="button"
               variant="secondary"
-              onClick={() => appendCell()}
+              onClick={appendCell}
             >
               <Plus className="w-4 h-4" /> Add Number
             </Button>
@@ -105,7 +105,7 @@ export const ContactInfoFields: React.FC<ContactInfoFieldsProps> = ({
             <Button
               type="button"
               variant="secondary"
-              onClick={() => appendEmail()}
+              onClick={appendEmail}
             >
               <Plus className="w-4 h-4" /> Add Email
             </Button>
