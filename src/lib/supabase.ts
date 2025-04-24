@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 // Helper function to get the current user's company ID
@@ -54,6 +53,25 @@ export async function isUserCompanyMember(companyId: string, userId: string): Pr
     return !!data;
   } catch (error) {
     console.error('Error checking company membership:', error);
+    return false;
+  }
+}
+
+// Helper function to get the effective user ID (either impersonated or actual auth.uid)
+export async function impersonateUser(userId: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.rpc('admin_impersonate_user', {
+      user_id: userId
+    });
+    
+    if (error) {
+      console.error('Error impersonating user:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error impersonating user:', error);
     return false;
   }
 }

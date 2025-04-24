@@ -475,7 +475,19 @@ export type Database = {
         Args: { company_id: string }
         Returns: boolean
       }
+      end_impersonation: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       generate_invitation_token: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_effective_user_company_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_effective_user_id: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
@@ -496,7 +508,7 @@ export type Database = {
         Returns: boolean
       }
       is_user_company_member: {
-        Args: { company_uuid: string; user_uuid: string }
+        Args: { company_uuid: string; user_uuid?: string }
         Returns: boolean
       }
       log_admin_action: {
@@ -507,6 +519,10 @@ export type Database = {
           details?: Json
         }
         Returns: undefined
+      }
+      start_impersonation: {
+        Args: { target_user_id: string }
+        Returns: boolean
       }
       user_is_company_member: {
         Args: { _company_id: string }

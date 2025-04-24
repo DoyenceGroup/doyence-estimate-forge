@@ -1,10 +1,11 @@
 
-import type { UserProfile } from "@/lib/types";
-import type { supabase } from "@/integrations/supabase/client";
+import { Session, User } from '@supabase/supabase-js';
+import { UserProfile } from '@/lib/types';
+import { SupabaseClient } from '@supabase/supabase-js';
 
-export type AuthContextType = {
-  session: any;
-  user: any;
+export interface AuthContextType {
+  session: Session | null;
+  user: User | null;
   profile: UserProfile | null;
   isLoading: boolean;
   isSuperuser: boolean;
@@ -16,5 +17,5 @@ export type AuthContextType = {
   resendOtp: (email: string) => Promise<void>;
   impersonateUser: (userId: string) => Promise<void>;
   endImpersonation: () => Promise<void>;
-  supabase: typeof supabase;
-};
+  supabase: SupabaseClient;
+}

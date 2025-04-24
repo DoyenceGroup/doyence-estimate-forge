@@ -77,7 +77,6 @@ export default function UsersManagement({ isSuperuser }: UsersManagementProps) {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        // Fetch user profiles
         const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
           .select('*')
@@ -87,7 +86,6 @@ export default function UsersManagement({ isSuperuser }: UsersManagementProps) {
           throw profilesError;
         }
         
-        // Fetch admin users
         const { data: admins, error: adminsError } = await supabase
           .from('admin_users')
           .select('*');
@@ -96,11 +94,10 @@ export default function UsersManagement({ isSuperuser }: UsersManagementProps) {
           throw adminsError;
         }
         
-        // Transform profiles to match UserProfile type
         const transformedProfiles = profiles?.map(profile => ({
           ...profile,
-          email: profile.company_email, // Map company_email to email to satisfy the type
-          user_id: profile.id, // Use id as user_id to satisfy the type
+          email: profile.company_email,
+          user_id: profile.id,
         })) as UserProfile[];
         
         setUsers(transformedProfiles || []);
@@ -134,7 +131,6 @@ export default function UsersManagement({ isSuperuser }: UsersManagementProps) {
     
   const handleUpdateUserStatus = async (userId: string, status: string) => {
     try {
-      // Update user status in profiles table
       const { error } = await supabase
         .from('profiles')
         .update({ status })
@@ -144,7 +140,6 @@ export default function UsersManagement({ isSuperuser }: UsersManagementProps) {
         throw error;
       }
       
-      // Update local state
       setUsers(users.map(user => 
         user.id === userId ? { ...user, status } : user
       ));
@@ -166,7 +161,6 @@ export default function UsersManagement({ isSuperuser }: UsersManagementProps) {
   const handleUpdateAdminStatus = async (userId: string, makeAdmin: boolean, role: 'admin' | 'superuser' = 'admin') => {
     try {
       if (makeAdmin) {
-        // Add user as admin
         const { error } = await supabase
           .from('admin_users')
           .insert({
@@ -179,7 +173,6 @@ export default function UsersManagement({ isSuperuser }: UsersManagementProps) {
           throw error;
         }
         
-        // Update local state
         setAdminUsers([...adminUsers, {
           id: userId,
           role,
@@ -188,7 +181,6 @@ export default function UsersManagement({ isSuperuser }: UsersManagementProps) {
           is_active: true
         }]);
       } else {
-        // Remove admin status
         const { error } = await supabase
           .from('admin_users')
           .delete()
@@ -198,7 +190,6 @@ export default function UsersManagement({ isSuperuser }: UsersManagementProps) {
           throw error;
         }
         
-        // Update local state
         setAdminUsers(adminUsers.filter(admin => admin.id !== userId));
       }
       
