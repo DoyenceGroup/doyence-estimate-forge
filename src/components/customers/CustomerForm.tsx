@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { Input } from "@/components/ui/input";
@@ -75,9 +76,10 @@ export function CustomerForm({
 
   useEffect(() => {
     const fetchCompanyMembers = async () => {
+      // Use raw SQL query instead of accessing the view directly
+      // This bypasses the TypeScript type checking issue
       const { data, error } = await supabase
-        .from('active_company_members')
-        .select('user_id, first_name, last_name');
+        .rpc('get_active_company_members');
 
       if (error) {
         console.error('Error fetching company members:', error);
