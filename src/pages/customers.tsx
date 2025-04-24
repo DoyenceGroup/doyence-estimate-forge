@@ -73,7 +73,7 @@ const Customers = () => {
       setLoading(true);
       if (!session?.user?.id) return;
       
-      const { data: companyIdData, error: companyIdError } = await supabase.rpc('get_effective_user_company_id');
+      const { data: companyIdData, error: companyIdError } = await supabase.rpc<string>('get_effective_user_company_id');
       
       if (companyIdError) {
         console.error("Error getting effective user company ID:", companyIdError);
