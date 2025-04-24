@@ -73,9 +73,17 @@ const Customers = () => {
       setLoading(true);
       if (!session?.user?.id) return;
       
+      const { data: companyId, error: companyIdError } = await supabase.rpc('get_effective_user_company_id');
+      
+      if (companyIdError) {
+        console.error("Error getting effective user company ID:", companyIdError);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("customers")
         .select("*")
+        .eq("company_id", companyId)
         .order("created_at", { ascending: false });
       
       if (error) {
