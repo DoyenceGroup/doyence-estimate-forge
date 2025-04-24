@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -22,11 +22,18 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 type CustomerFormProps = {
   customer?: any;
   onSave: () => void;
   onCancel: () => void;
+};
+
+type CompanyMember = {
+  user_id: string;
+  first_name: string | null;
+  last_name: string | null;
 };
 
 type CustomerFormType = {
@@ -36,6 +43,7 @@ type CustomerFormType = {
   emails: { value: string }[];
   address: string;
   lead_source: string;
+  lead_owner_id?: string;
   lead_source_description?: string;
 };
 
@@ -61,7 +69,26 @@ export function CustomerForm({
   const [leadSource, setLeadSource] = React.useState(
     customer?.lead_source || ""
   );
+  const [companyMembers, setCompanyMembers] = useState<CompanyMember[]>([]);
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const fetchCompanyMembers = async () => {
+      const { data, error } = await supabase
+        .from('active_company_members')
+        .select('user_id, first_name, last_name');
+
+      if (error) {
+        console.error('Error fetching company members:', error);
+        return;
+      }
+
+      setCompanyMembers(data || []);
+    };
+
+    fetchCompanyMembers();
+  }, []);
 
   const form = useForm<CustomerFormType>({
     defaultValues: customer
@@ -76,6 +103,7 @@ export function CustomerForm({
             [{ value: "" }],
           address: customer.address || "",
           lead_source: customer.lead_source || "",
+          lead_owner_id: customer.lead_owner_id || user?.id,
           lead_source_description: customer.lead_source_description || "",
         }
       : {
@@ -85,6 +113,7 @@ export function CustomerForm({
           emails: [{ value: "" }],
           address: "",
           lead_source: "",
+          lead_owner_id: user?.id,
           lead_source_description: "",
         },
   });
@@ -132,13 +161,12 @@ export function CustomerForm({
         emails: values.emails.map((e) => e.value).filter(Boolean),
         address: values.address,
         lead_source: values.lead_source,
+        lead_owner_id: values.lead_owner_id,
         lead_source_description:
           values.lead_source === "Other"
             ? values.lead_source_description
             : null,
       };
-
-      console.log("Saving customer:", newCustomer);
 
       let result;
       if (customer) {
@@ -329,7 +357,6 @@ export function CustomerForm({
           )}
         />
 
-        {/* LEAD SOURCE DROPDOWN */}
         <FormField
           control={control}
           name="lead_source"
@@ -365,7 +392,6 @@ export function CustomerForm({
           )}
         />
 
-        {/* Show description only if "Other" is selected */}
         {watchedLeadSource === "Other" && (
           <FormField
             control={control}
@@ -392,6 +418,36 @@ export function CustomerForm({
             }}
           />
         )}
+
+        <FormField
+          control={control}
+          name="lead_owner_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Lead Owner</FormLabel>
+              <FormControl>
+                <Select
+                  value={field.value}
+                  onValueChange={(val) => field.onChange(val)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select lead owner" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {companyMembers.map((member) => (
+                      <SelectItem 
+                        key={member.user_id} 
+                        value={member.user_id}
+                      >
+                        {member.first_name} {member.last_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormControl>
+            </FormItem>
+          )}
+        />
 
         <div className="flex justify-between mt-6">
           <Button variant="outline" type="button" onClick={onCancel}>
