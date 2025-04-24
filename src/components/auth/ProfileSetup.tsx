@@ -1,146 +1,37 @@
 
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/hooks/use-toast";
-import LogoUpload from "@/components/ui/logo-upload";
-import ProfilePhotoUpload from "@/components/ui/profile-photo-upload";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import { Building, Briefcase } from "lucide-react";
+import CompanyCreationForm from "./CompanyCreationForm";
 import JoinCompany from "./JoinCompany";
+import { useProfileSetup } from "@/hooks/useProfileSetup";
 
 const ProfileSetupForm = () => {
-  const { user, profile } = useAuth();
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [companyName, setCompanyName] = useState("");
-  const [companyRole, setCompanyRole] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [website, setWebsite] = useState("");
-  const [address, setAddress] = useState(""); 
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [createNewCompany, setCreateNewCompany] = useState(false);
-
-  const navigate = useNavigate();
-  const { toast } = useToast();
-
-  // Load existing data from profile or user metadata
-  useEffect(() => {
-    if (user?.user_metadata) {
-      // Use data from user metadata if available (from signup)
-      setFirstName(user.user_metadata.first_name || "");
-      setLastName(user.user_metadata.last_name || "");
-    }
-    
-    if (profile) {
-      // Use data from profile if available
-      setFirstName(profile.first_name || firstName);
-      setLastName(profile.last_name || lastName);
-      setCompanyName(profile.company_name || "");
-      setPhoneNumber(profile.phone_number || "");
-      setCompanyRole(profile.company_role || "");
-      setWebsite(profile.website || "");
-      setAddress(profile.company_address || "");
-      
-      if (profile.logo_url) {
-        setLogoUrl(profile.logo_url);
-      }
-      
-      if (profile.profile_photo_url) {
-        setProfilePhotoUrl(profile.profile_photo_url);
-      }
-    }
-  }, [user, profile]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!user?.id) {
-      toast({
-        title: "Authentication error",
-        description: "You must be logged in to complete your profile.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setIsLoading(true);
-    
-    try {
-      let companyId = null;
-      
-      if (createNewCompany) {
-        // Get the user's email from session
-        const email = user.email;
-        
-        const { data: company, error: companyError } = await supabase
-          .from('companies')
-          .insert({
-            name: companyName,
-            email: email,
-            website: website,
-            address: address,
-            logo_url: logoUrl
-          })
-          .select()
-          .single();
-          
-        if (companyError) throw companyError;
-        
-        companyId = company.id;
-        
-        await supabase
-          .from('company_members')
-          .insert({
-            company_id: companyId,
-            user_id: user.id,
-            role: 'admin'
-          });
-      }
-      
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          first_name: firstName,
-          last_name: lastName,
-          company_role: companyRole,
-          phone_number: phoneNumber,
-          profile_photo_url: profilePhotoUrl,
-          logo_url: logoUrl,
-          company_id: companyId,
-          company_name: companyName,
-          company_address: address,
-          website: website,
-          profile_completed: true,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", user.id);
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Profile setup complete",
-        description: "Your account is ready to use.",
-      });
-      
-      navigate("/dashboard", { replace: true });
-    } catch (error: any) {
-      toast({
-        title: "Profile setup failed",
-        description: error.message || "An error occurred. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const {
+    firstName,
+    setFirstName,
+    lastName,
+    setLastName,
+    companyName,
+    setCompanyName,
+    companyRole,
+    setCompanyRole,
+    phoneNumber,
+    setPhoneNumber,
+    website,
+    setWebsite,
+    address,
+    setAddress,
+    setLogoUrl,
+    setProfilePhotoUrl,
+    isLoading,
+    handleSubmit,
+  } = useProfileSetup();
 
   return (
     <Card className="w-full max-w-2xl">
@@ -155,105 +46,28 @@ const ProfileSetupForm = () => {
         </TabsList>
         
         <TabsContent value="create">
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-6">
-              <div className="flex flex-col md:flex-row gap-6 items-center justify-center">
-                <ProfilePhotoUpload onImageUpload={setProfilePhotoUrl} />
-                <LogoUpload onImageUpload={setLogoUrl} />
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
-                  <Input
-                    id="firstName"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input
-                    id="lastName"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="companyName" className="flex items-center gap-1">
-                  <Building className="h-4 w-4" />
-                  Company Name
-                </Label>
-                <Input
-                  id="companyName"
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="address" className="flex items-center gap-1">
-                  <Building className="h-4 w-4" />
-                  Company Address
-                </Label>
-                <Input
-                  id="address"
-                  placeholder="e.g. 123 Main St, City, State"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="companyRole" className="flex items-center gap-1">
-                  <Briefcase className="h-4 w-4" />
-                  Your Position/Role
-                </Label>
-                <Input
-                  id="companyRole"
-                  placeholder="e.g. Owner, Project Manager, Estimator"
-                  value={companyRole}
-                  onChange={(e) => setCompanyRole(e.target.value)}
-                  required
-                />
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="phoneNumber">Phone Number</Label>
-                  <Input
-                    id="phoneNumber"
-                    type="tel"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="website">Website (optional)</Label>
-                  <Input
-                    id="website"
-                    type="url"
-                    placeholder="https://example.com"
-                    value={website}
-                    onChange={(e) => setWebsite(e.target.value)}
-                  />
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Saving..." : "Complete Profile & Continue"}
-              </Button>
-            </CardFooter>
-          </form>
+          <CardContent>
+            <CompanyCreationForm
+              firstName={firstName}
+              setFirstName={setFirstName}
+              lastName={lastName}
+              setLastName={setLastName}
+              companyName={companyName}
+              setCompanyName={setCompanyName}
+              companyRole={companyRole}
+              setCompanyRole={setCompanyRole}
+              phoneNumber={phoneNumber}
+              setPhoneNumber={setPhoneNumber}
+              website={website}
+              setWebsite={setWebsite}
+              address={address}
+              setAddress={setAddress}
+              setLogoUrl={setLogoUrl}
+              setProfilePhotoUrl={setProfilePhotoUrl}
+              isLoading={isLoading}
+              onSubmit={handleSubmit}
+            />
+          </CardContent>
         </TabsContent>
         
         <TabsContent value="join">
