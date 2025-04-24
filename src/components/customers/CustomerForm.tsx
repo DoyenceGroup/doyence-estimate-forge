@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { Input } from "@/components/ui/input";
@@ -76,16 +75,9 @@ export function CustomerForm({
 
   useEffect(() => {
     const fetchCompanyMembers = async () => {
-      // Use a direct query approach instead of RPC
-      // Query the company_members and profiles tables directly
       const { data: profileData, error } = await supabase
         .from('profiles')
-        .select(`
-          id as user_id,
-          first_name,
-          last_name,
-          company_id
-        `)
+        .select('id, first_name, last_name, company_id')
         .eq('company_id', user?.company_id)
         .order('first_name');
 
@@ -94,9 +86,8 @@ export function CustomerForm({
         return;
       }
 
-      // Convert the data to the CompanyMember type
       const members = profileData?.map(profile => ({
-        user_id: profile.user_id,
+        user_id: profile.id,
         first_name: profile.first_name,
         last_name: profile.last_name
       })) || [];
