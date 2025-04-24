@@ -1,4 +1,6 @@
 
+import { UseFormReturn } from "react-hook-form";
+
 export type CustomerFormType = {
   name: string;
   last_name: string;

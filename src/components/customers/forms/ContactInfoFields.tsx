@@ -1,23 +1,24 @@
 
 import React from "react";
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { UseFormReturn } from "react-hook-form";
+import { FieldArrayWithId } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { FormItem, FormLabel, FormDescription, FormMessage } from "@/components/ui/form";
 import { Plus, Trash } from "lucide-react";
-import { UseFormReturn } from "react-hook-form";
 import { CustomerFormType } from "./CustomerFormTypes";
 
 type ContactInfoFieldsProps = {
   form: UseFormReturn<CustomerFormType>;
-  cellFields: any[];
-  emailFields: any[];
+  cellFields: FieldArrayWithId<CustomerFormType, "cell_numbers", "id">[];
+  emailFields: FieldArrayWithId<CustomerFormType, "emails", "id">[];
   appendCell: () => void;
   removeCell: (index: number) => void;
   appendEmail: () => void;
   removeEmail: (index: number) => void;
 };
 
-export const ContactInfoFields: React.FC<ContactInfoFieldsProps> = ({
+export function ContactInfoFields({
   form,
   cellFields,
   emailFields,
@@ -25,11 +26,14 @@ export const ContactInfoFields: React.FC<ContactInfoFieldsProps> = ({
   removeCell,
   appendEmail,
   removeEmail,
-}) => {
+}: ContactInfoFieldsProps) {
   return (
     <>
       <FormItem className="mb-2">
         <FormLabel>Cell Numbers</FormLabel>
+        <FormDescription>
+          Add up to 5 numbers. At least 1 required.
+        </FormDescription>
         <div className="space-y-2 flex flex-col">
           {cellFields.map((field, idx) => (
             <div className="flex items-center gap-2" key={field.id}>
@@ -68,12 +72,15 @@ export const ContactInfoFields: React.FC<ContactInfoFieldsProps> = ({
           )}
         </div>
         <FormMessage>
-          {form.formState.errors.cell_numbers?.[0]?.value?.message}
+          {form.formState.errors.cell_numbers?.[0]?.value?.message as string}
         </FormMessage>
       </FormItem>
 
       <FormItem>
         <FormLabel>Emails</FormLabel>
+        <FormDescription>
+          Add up to 4 emails. At least 1 required.
+        </FormDescription>
         <div className="space-y-2 flex flex-col">
           {emailFields.map((field, idx) => (
             <div className="flex items-center gap-2" key={field.id}>
@@ -112,9 +119,9 @@ export const ContactInfoFields: React.FC<ContactInfoFieldsProps> = ({
           )}
         </div>
         <FormMessage>
-          {form.formState.errors.emails?.[0]?.value?.message}
+          {form.formState.errors.emails?.[0]?.value?.message as string}
         </FormMessage>
       </FormItem>
     </>
   );
-};
+}

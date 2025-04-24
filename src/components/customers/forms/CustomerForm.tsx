@@ -25,9 +25,12 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
     isSubmitting
   } = useCustomerForm(customer, onSave);
 
+  // Fix: Use handleSubmit from form to convert React form event to our form values
+  const handleFormSubmit = form.handleSubmit(onSubmit);
+
   return (
     <Form {...form}>
-      <form onSubmit={onSubmit}>
+      <form onSubmit={handleFormSubmit}>
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -63,9 +66,11 @@ export function CustomerForm({ customer, onSave, onCancel }: CustomerFormProps) 
           form={form}
           cellFields={cellFields}
           emailFields={emailFields}
-          appendCell={appendCell}
+          // Fix: Pass a properly typed function that accepts arguments
+          appendCell={() => appendCell({ value: "" })}
           removeCell={removeCell}
-          appendEmail={appendEmail}
+          // Fix: Pass a properly typed function that accepts arguments
+          appendEmail={() => appendEmail({ value: "" })}
           removeEmail={removeEmail}
         />
 
