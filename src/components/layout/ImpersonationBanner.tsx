@@ -3,6 +3,7 @@ import React from 'react';
 import { AlertTriangle, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/useAuth';
+import { ExtendedUser } from '@/contexts/auth-types';
 
 export default function ImpersonationBanner() {
   const { user, profile, endImpersonation } = useAuth();

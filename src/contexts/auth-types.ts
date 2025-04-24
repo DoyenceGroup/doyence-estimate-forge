@@ -3,9 +3,17 @@ import { Session, User } from '@supabase/supabase-js';
 import { UserProfile } from '@/lib/types';
 import { SupabaseClient } from '@supabase/supabase-js';
 
+// Extend the Supabase User type to include our additional properties
+export interface ExtendedUser extends User {
+  impersonated?: boolean;
+  company_id?: string;
+  first_name?: string;
+  last_name?: string;
+}
+
 export interface AuthContextType {
   session: Session | null;
-  user: User | null;
+  user: ExtendedUser | null;
   profile: UserProfile | null;
   isLoading: boolean;
   isSuperuser: boolean;

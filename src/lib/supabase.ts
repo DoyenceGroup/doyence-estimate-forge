@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 // Helper function to get the current user's company ID
@@ -57,11 +58,12 @@ export async function isUserCompanyMember(companyId: string, userId: string): Pr
   }
 }
 
-// Helper function to get the effective user ID (either impersonated or actual auth.uid)
+// Helper function to impersonate a user (admin/superuser only)
 export async function impersonateUser(userId: string): Promise<boolean> {
   try {
-    const { data, error } = await supabase.rpc('admin_impersonate_user', {
-      user_id: userId
+    // Use the RPC function we created in the database
+    const { data, error } = await supabase.rpc('start_impersonation', {
+      target_user_id: userId
     });
     
     if (error) {
@@ -72,6 +74,23 @@ export async function impersonateUser(userId: string): Promise<boolean> {
     return true;
   } catch (error) {
     console.error('Error impersonating user:', error);
+    return false;
+  }
+}
+
+// Helper function to end impersonation
+export async function endImpersonation(): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.rpc('end_impersonation');
+    
+    if (error) {
+      console.error('Error ending impersonation:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error ending impersonation:', error);
     return false;
   }
 }

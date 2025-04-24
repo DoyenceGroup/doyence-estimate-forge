@@ -22,7 +22,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/useAuth";
 
 type CustomerFormProps = {
   customer?: any;
@@ -71,11 +71,11 @@ export function CustomerForm({
   );
   const [companyMembers, setCompanyMembers] = useState<CompanyMember[]>([]);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   useEffect(() => {
     const fetchCompanyMembers = async () => {
-      if (!user?.company_id) {
+      if (!profile?.company_id) {
         console.error('Missing company ID for current user');
         return;
       }
@@ -83,7 +83,7 @@ export function CustomerForm({
       const { data: profileData, error } = await supabase
         .from('profiles')
         .select('id, first_name, last_name')
-        .eq('company_id', user.company_id)
+        .eq('company_id', profile.company_id)
         .order('first_name');
 
       if (error) {
@@ -98,10 +98,10 @@ export function CustomerForm({
       })) || [];
 
       // Check if current user is already included in the list
-      const currentUserIncluded = members.some(member => member.user_id === user.id);
+      const currentUserIncluded = members.some(member => member.user_id === user?.id);
       
       // If not, add current user to the list with proper name handling
-      if (!currentUserIncluded && user.id) {
+      if (!currentUserIncluded && user?.id) {
         // Fetch current user profile to ensure we have the most up-to-date name
         const { data: currentUserProfile, error: userError } = await supabase
           .from('profiles')
@@ -118,8 +118,8 @@ export function CustomerForm({
         } else {
           members.push({
             user_id: user.id,
-            first_name: user.first_name || 'Unknown',
-            last_name: user.last_name || 'User'
+            first_name: profile?.first_name || 'Unknown',
+            last_name: profile?.last_name || 'User'
           });
         }
       }
@@ -127,7 +127,7 @@ export function CustomerForm({
       setCompanyMembers(members);
     };
 
-    if (user?.company_id) {
+    if (profile?.company_id) {
       fetchCompanyMembers();
     } else {
       // If no company_id, at least add the current user
@@ -149,8 +149,8 @@ export function CustomerForm({
           } else {
             setCompanyMembers([{
               user_id: user.id,
-              first_name: user.first_name || 'Unknown',
-              last_name: user.last_name || 'User'
+              first_name: profile?.first_name || 'Unknown',
+              last_name: profile?.last_name || 'User'
             }]);
           }
         };
@@ -158,7 +158,7 @@ export function CustomerForm({
         fetchCurrentUserProfile();
       }
     }
-  }, [user]);
+  }, [user, profile]);
 
   const form = useForm<CustomerFormType>({
     defaultValues: customer

@@ -1,15 +1,117 @@
-
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
-import type { CustomerFormType, CompanyMember } from "./CustomerFormTypes";
+import { useAuth } from "@/contexts/useAuth";
+import { CustomerFormType, CompanyMember } from "./CustomerFormTypes";
 
-export const useCustomerForm = (customer?: any, onSave?: () => void) => {
+const LEAD_SOURCES = [
+  "Word of Mouth",
+  "Website",
+  "LocalPros",
+  "Bark",
+  "Facebook",
+  "Instagram",
+  "LinkedIn",
+  "Car Branding",
+  "House Branding",
+  "Youtube",
+  "Other",
+];
+
+export function useCustomerForm(customer: any, onSave: () => void) {
+  const [leadSource, setLeadSource] = useState(customer?.lead_source || "");
   const [companyMembers, setCompanyMembers] = useState<CompanyMember[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+
+  useEffect(() => {
+    const fetchCompanyMembers = async () => {
+      if (!profile?.company_id) {
+        console.error('Missing company ID for current user');
+        return;
+      }
+
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .eq('company_id', profile.company_id)
+        .order('first_name');
+
+      if (error) {
+        console.error('Error fetching company members:', error);
+        return;
+      }
+
+      const members = profileData?.map(profile => ({
+        user_id: profile.id,
+        first_name: profile.first_name || '',
+        last_name: profile.last_name || ''
+      })) || [];
+
+      // Check if current user is already included in the list
+      const currentUserIncluded = members.some(member => member.user_id === user?.id);
+      
+      // If not, add current user to the list with proper name handling
+      if (!currentUserIncluded && user?.id) {
+        // Fetch current user profile to ensure we have the most up-to-date name
+        const { data: currentUserProfile, error: userError } = await supabase
+          .from('profiles')
+          .select('first_name, last_name')
+          .eq('id', user.id)
+          .single();
+          
+        if (!userError && currentUserProfile) {
+          members.push({
+            user_id: user.id,
+            first_name: currentUserProfile.first_name || 'Unknown',
+            last_name: currentUserProfile.last_name || 'User'
+          });
+        } else {
+          members.push({
+            user_id: user.id,
+            first_name: profile?.first_name || 'Unknown',
+            last_name: profile?.last_name || 'User'
+          });
+        }
+      }
+
+      setCompanyMembers(members);
+    };
+
+    if (profile?.company_id) {
+      fetchCompanyMembers();
+    } else {
+      // If no company_id, at least add the current user
+      if (user?.id) {
+        // Fetch current user profile to ensure we have the most up-to-date name
+        const fetchCurrentUserProfile = async () => {
+          const { data: currentUserProfile, error } = await supabase
+            .from('profiles')
+            .select('first_name, last_name')
+            .eq('id', user.id)
+            .single();
+            
+          if (!error && currentUserProfile) {
+            setCompanyMembers([{
+              user_id: user.id,
+              first_name: currentUserProfile.first_name || 'Unknown',
+              last_name: currentUserProfile.last_name || 'User'
+            }]);
+          } else {
+            setCompanyMembers([{
+              user_id: user.id,
+              first_name: profile?.first_name || 'Unknown',
+              last_name: profile?.last_name || 'User'
+            }]);
+          }
+        };
+        
+        fetchCurrentUserProfile();
+      }
+    }
+  }, [user, profile]);
 
   const form = useForm<CustomerFormType>({
     defaultValues: customer
@@ -42,7 +144,7 @@ export const useCustomerForm = (customer?: any, onSave?: () => void) => {
   const {
     control,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
     reset,
     setValue,
     watch,
@@ -50,113 +152,22 @@ export const useCustomerForm = (customer?: any, onSave?: () => void) => {
 
   const {
     fields: cellFields,
-    append: appendCellRaw,
+    append: appendCell,
     remove: removeCell,
   } = useFieldArray({ name: "cell_numbers", control });
+  
   const {
     fields: emailFields,
-    append: appendEmailRaw,
+    append: appendEmail,
     remove: removeEmail,
   } = useFieldArray({ name: "emails", control });
 
-  // Create wrapper functions to fix TypeScript errors
-  const appendCell = () => appendCellRaw({ value: "" });
-  const appendEmail = () => appendEmailRaw({ value: "" });
-
   const watchedLeadSource = watch("lead_source");
-
-  useEffect(() => {
-    const fetchCompanyMembers = async () => {
-      if (!user?.company_id) {
-        console.error('Missing company ID for current user');
-        return;
-      }
-
-      const { data: profileData, error } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name')
-        .eq('company_id', user.company_id)
-        .order('first_name');
-
-      if (error) {
-        console.error('Error fetching company members:', error);
-        return;
-      }
-
-      const members = profileData?.map(profile => ({
-        user_id: profile.id,
-        first_name: profile.first_name || '',
-        last_name: profile.last_name || ''
-      })) || [];
-
-      // Check if current user is already included in the list
-      const currentUserIncluded = members.some(member => member.user_id === user.id);
-      
-      // If not, add current user to the list with proper name handling
-      if (!currentUserIncluded && user.id) {
-        // Fetch current user profile to ensure we have the most up-to-date name
-        const { data: currentUserProfile, error: userError } = await supabase
-          .from('profiles')
-          .select('first_name, last_name')
-          .eq('id', user.id)
-          .single();
-          
-        if (!userError && currentUserProfile) {
-          members.push({
-            user_id: user.id,
-            first_name: currentUserProfile.first_name || 'Unknown',
-            last_name: currentUserProfile.last_name || 'User'
-          });
-        } else {
-          members.push({
-            user_id: user.id,
-            first_name: user.first_name || 'Unknown',
-            last_name: user.last_name || 'User'
-          });
-        }
-      }
-
-      console.log("Company members:", members);
-      setCompanyMembers(members);
-    };
-
-    if (user?.company_id) {
-      fetchCompanyMembers();
-    } else {
-      // If no company_id, at least add the current user
-      if (user?.id) {
-        // Fetch current user profile to ensure we have the most up-to-date name
-        const fetchCurrentUserProfile = async () => {
-          const { data: currentUserProfile, error } = await supabase
-            .from('profiles')
-            .select('first_name, last_name')
-            .eq('id', user.id)
-            .single();
-            
-          if (!error && currentUserProfile) {
-            console.log("Current user profile:", currentUserProfile);
-            setCompanyMembers([{
-              user_id: user.id,
-              first_name: currentUserProfile.first_name || 'Unknown',
-              last_name: currentUserProfile.last_name || 'User'
-            }]);
-          } else {
-            console.log("Using user object for name:", user);
-            setCompanyMembers([{
-              user_id: user.id,
-              first_name: user.first_name || 'Unknown',
-              last_name: user.last_name || 'User'
-            }]);
-          }
-        };
-        
-        fetchCurrentUserProfile();
-      }
-    }
-  }, [user]);
 
   async function onSubmit(values: CustomerFormType) {
     try {
+      setIsSubmitting(true);
+      
       const userRes = await supabase.auth.getUser();
       const userId = userRes.data.user?.id;
 
@@ -211,7 +222,7 @@ export const useCustomerForm = (customer?: any, onSave?: () => void) => {
         return;
       }
 
-      if (onSave) onSave();
+      onSave();
       reset();
     } catch (error) {
       console.error("Error in onSubmit:", error);
@@ -220,6 +231,8 @@ export const useCustomerForm = (customer?: any, onSave?: () => void) => {
         description: "An unexpected error occurred",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -233,7 +246,7 @@ export const useCustomerForm = (customer?: any, onSave?: () => void) => {
     appendEmail,
     removeEmail,
     watchedLeadSource,
-    onSubmit: handleSubmit(onSubmit),
+    onSubmit,
     isSubmitting
   };
-};
+}
