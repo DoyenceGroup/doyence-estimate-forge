@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { Input } from "@/components/ui/input";
@@ -105,8 +104,8 @@ export function CustomerForm({
       if (!currentUserIncluded && user.id) {
         members.push({
           user_id: user.id,
-          first_name: user.first_name || "Current",
-          last_name: user.last_name || "User"
+          first_name: user.first_name || "",
+          last_name: user.last_name || ""
         });
       }
 
@@ -120,8 +119,8 @@ export function CustomerForm({
       if (user?.id) {
         setCompanyMembers([{
           user_id: user.id,
-          first_name: user.first_name || "Current",
-          last_name: user.last_name || "User"
+          first_name: user.first_name || "",
+          last_name: user.last_name || ""
         }]);
       }
     }
@@ -478,7 +477,7 @@ export function CustomerForm({
                         key={member.user_id} 
                         value={member.user_id}
                       >
-                        {member.first_name || ''} {member.last_name || ''}
+                        {member.first_name} {member.last_name}
                       </SelectItem>
                     ))}
                   </SelectContent>
