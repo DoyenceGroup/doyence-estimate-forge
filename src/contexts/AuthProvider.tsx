@@ -1,4 +1,3 @@
-
 import {
   createContext,
   useContext,
@@ -140,52 +139,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       setIsLoading(true);
       try {
-        // Check if we are impersonating - if so, we need to get the effective user ID
-        const { data: effectiveUserId, error: userIdError } = await supabase.rpc('get_effective_user_id');
-        
-        if (userIdError) {
-          console.error("Error getting effective user ID:", userIdError);
-          // Fall back to the actual user ID
-          fetchUserProfile(user.id);
-        } else {
-          // If effective user ID is different from actual user ID, we're impersonating
-          const isCurrentlyImpersonating = effectiveUserId !== user.id;
-          setIsImpersonating(isCurrentlyImpersonating);
-          
-          if (isCurrentlyImpersonating) {
-            // Mark the current user as being impersonated
-            setUser(currentUser => ({
-              ...currentUser,
-              impersonated: true
-            }));
-            
-            // Store the original user if not already stored
-            if (!originalUser) {
-              setOriginalUser({
-                id: user.id,
-                session: session
-              });
-            }
-            
-            // Get profile for the impersonated user
-            fetchUserProfile(effectiveUserId);
-          } else {
-            // Normal case - get profile for actual user
-            fetchUserProfile(user.id);
-          }
-        }
-      } catch (err) {
-        console.error("Error in profile fetch initialization:", err);
-        setIsLoading(false);
-      }
-    };
-    
-    const fetchUserProfile = async (profileId: string) => {
-      try {
         const { data, error } = await supabase
           .from("profiles")
           .select("*")
-          .eq("id", profileId)
+          .eq("id", user.id)
           .single();
 
         if (error) {
@@ -220,6 +177,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } catch (err) {
         console.error("Error in profile fetch:", err);
       }
+
       setIsLoading(false);
     };
 
@@ -229,7 +187,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setProfile(null);
       setIsLoading(false);
     }
-  }, [user, toast, originalUser, session]);
+  }, [user, toast]);
 
   // Auth actions
   const signInWithEmailAndPassword = async (email: string, password: string) => {
@@ -361,7 +319,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       setIsLoading(true);
       
-      // Store current user before impersonation if not already stored
+      // Store current user before impersonation
       if (!isImpersonating) {
         setOriginalUser({
           id: user.id,
@@ -369,35 +327,64 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
       }
       
-      // Call the server-side impersonation function
-      const { data, error } = await supabase.rpc('start_impersonation', {
-        target_user_id: userId
+      // Call the RPC function to impersonate user
+      const { data, error } = await supabase.rpc('admin_impersonate_user', {
+        user_id: userId
       });
       
       if (error) {
         throw error;
       }
       
-      console.log("Impersonation started successfully:", data);
+      // Fetch the impersonated user profile
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
+        
+      if (profileError) {
+        throw profileError;
+      }
       
-      // After starting server-side impersonation, we need to update our frontend state
-      // In this case, we update the user state to indicate impersonation
+      // Update state to reflect impersonation
       setIsImpersonating(true);
       
-      // Mark the user as being impersonated
+      // Set the impersonated user data
       const impersonatedUser = {
         ...user,
+        id: userId,
         impersonated: true
       };
       
       setUser(impersonatedUser);
       
-      // Fetch the impersonated user's profile - it will use the effective user ID internally
-      // Note: The fetchProfile effect will automatically run because we updated the user state
+      // Create a profile object for the impersonated user
+      const profileData2: UserProfile = {
+        id: profileData.id || "",
+        user_id: profileData.id || "",
+        email: profileData.company_email || null,
+        first_name: profileData.first_name || null,
+        last_name: profileData.last_name || null,
+        phone_number: profileData.phone_number || null,
+        profile_photo_url: profileData.profile_photo_url || null,
+        company_role: profileData.company_role || null,
+        role: profileData.role || null,
+        profile_completed: profileData.profile_completed || false,
+        company_id: profileData.company_id || null,
+        company_name: profileData.company_name || null,
+        company_email: profileData.company_email || null,
+        company_address: profileData.company_address || null,
+        logo_url: profileData.logo_url || null,
+        website: profileData.website || null,
+        status: profileData.status || "active"
+      };
+      
+      setProfile(profileData2);
       
       toast({
         title: "Impersonation active",
-        description: "You are now viewing the application as another user",
+        description: `You are now viewing as ${profileData2.first_name || ''} ${profileData2.last_name || ''}`,
       });
       
       // Navigate to dashboard
@@ -416,42 +403,54 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const endImpersonation = async () => {
-    if (!isImpersonating) {
+    if (!isImpersonating || !originalUser) {
       return;
     }
     
     try {
       setIsLoading(true);
       
-      // Call the server-side function to end impersonation
-      const { data, error } = await supabase.rpc('end_impersonation');
+      // Restore original user and session
+      setUser(originalUser);
+      setSession(originalUser.session);
       
+      // Reset impersonation state
+      setIsImpersonating(false);
+      setOriginalUser(null);
+      
+      // Re-fetch original user profile
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", originalUser.id)
+        .single();
+        
       if (error) {
         throw error;
       }
       
-      console.log("Impersonation ended successfully:", data);
+      // Create a profile object for the original user
+      const profileData: UserProfile = {
+        id: data.id || "",
+        user_id: data.id || "",
+        email: data.company_email || null,
+        first_name: data.first_name || null,
+        last_name: data.last_name || null,
+        phone_number: data.phone_number || null,
+        profile_photo_url: data.profile_photo_url || null,
+        company_role: data.company_role || null,
+        role: data.role || null,
+        profile_completed: data.profile_completed || false,
+        company_id: data.company_id || null,
+        company_name: data.company_name || null,
+        company_email: data.company_email || null,
+        company_address: data.company_address || null,
+        logo_url: data.logo_url || null,
+        website: data.website || null,
+        status: data.status || "active"
+      };
       
-      // Reset impersonation state
-      setIsImpersonating(false);
-      
-      // Update the user state to remove impersonation flag
-      setUser(currentUser => ({
-        ...currentUser,
-        impersonated: false
-      }));
-      
-      // Refresh the session to restore original user
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError) {
-        throw sessionError;
-      }
-      
-      setSession(sessionData.session);
-      
-      // Reset originalUser state
-      setOriginalUser(null);
+      setProfile(profileData);
       
       toast({
         title: "Impersonation ended",
@@ -478,7 +477,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(true);
       
       // If impersonating, end impersonation instead of signing out
-      if (isImpersonating) {
+      if (isImpersonating && originalUser) {
         await endImpersonation();
         return;
       }
