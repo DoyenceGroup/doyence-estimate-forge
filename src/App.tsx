@@ -45,7 +45,7 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
 };
 
 const AdminRoute = ({ children }: { children: JSX.Element }) => {
-  const { session, isLoading, isAdmin, isSuperuser } = useAuth();
+  const { session, isLoading, isAdmin, isSuperuser, user } = useAuth();
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
   
   useEffect(() => {
@@ -60,6 +60,11 @@ const AdminRoute = ({ children }: { children: JSX.Element }) => {
   
   if (!session) {
     return <Navigate to="/login" />;
+  }
+  
+  // Block access to admin routes when being impersonated
+  if (user?.impersonated) {
+    return <Navigate to="/dashboard" />;
   }
   
   return (isAdmin || isSuperuser) ? children : <Navigate to="/dashboard" />;

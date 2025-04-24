@@ -37,6 +37,9 @@ const Navbar = ({ onMobileMenuToggle }: NavbarProps) => {
     navigate("/admin");
   };
 
+  // Don't show admin controls if user is being impersonated
+  const showAdminControls = (isAdmin || isSuperuser) && !user?.impersonated;
+
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
       <div className="mx-auto px-4 sm:px-6 lg:px-8">
@@ -64,8 +67,8 @@ const Navbar = ({ onMobileMenuToggle }: NavbarProps) => {
           <div className="flex items-center gap-4">
             {user ? (
               <>
-                {/* Admin Dashboard Link (only for admins/superusers) */}
-                {(isAdmin || isSuperuser) && (
+                {/* Admin Dashboard Link (only for admins/superusers who aren't impersonating) */}
+                {showAdminControls && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -106,8 +109,8 @@ const Navbar = ({ onMobileMenuToggle }: NavbarProps) => {
                       </p>
                     </div>
                     <DropdownMenuSeparator />
-                    {/* Show Admin link in dropdown for mobile */}
-                    {(isAdmin || isSuperuser) && (
+                    {/* Show Admin link in dropdown for mobile only when not impersonating */}
+                    {showAdminControls && (
                       <>
                         <DropdownMenuItem 
                           className="cursor-pointer flex items-center gap-2 sm:hidden"
