@@ -35,7 +35,7 @@ export interface Customer {
 
 export interface UserProfile {
   id: string;
-  user_id: string;
+  user_id?: string; // Made optional since it's missing in some queries
   email: string | null;
   first_name: string | null;
   last_name: string | null;
@@ -107,10 +107,15 @@ export interface AdminAuditLog {
 
 export interface AdminUser {
   id: string;
-  role: 'admin' | 'superuser';
+  role: 'user' | 'admin' | 'superuser'; // Updated to include 'user' type
   created_at: string;
   created_by?: string;
   is_active: boolean;
+  profiles?: { // Added profiles property to match the join query
+    first_name: string | null;
+    last_name: string | null;
+    email: string | null;
+  };
 }
 
 export interface AnalyticsData {

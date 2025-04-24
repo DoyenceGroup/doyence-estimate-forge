@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -97,8 +96,15 @@ export default function UsersManagement({ isSuperuser }: UsersManagementProps) {
           throw adminsError;
         }
         
-        setUsers(profiles || []);
-        setAdminUsers(admins || []);
+        // Transform profiles to match UserProfile type
+        const transformedProfiles = profiles?.map(profile => ({
+          ...profile,
+          email: profile.company_email, // Map company_email to email to satisfy the type
+          user_id: profile.id, // Use id as user_id to satisfy the type
+        })) as UserProfile[];
+        
+        setUsers(transformedProfiles || []);
+        setAdminUsers(admins as AdminUser[] || []);
       } catch (error) {
         console.error('Error fetching users:', error);
         toast({
@@ -221,7 +227,7 @@ export default function UsersManagement({ isSuperuser }: UsersManagementProps) {
   const handleOpenAdminDialog = (user: UserProfile) => {
     setSelectedUser(user);
     const existingAdmin = adminUsers.find(admin => admin.id === user.id);
-    setAdminRole(existingAdmin?.role || 'admin');
+    setAdminRole(existingAdmin?.role as 'admin' | 'superuser' || 'admin');
     setIsAdminDialogOpen(true);
   };
   
@@ -379,7 +385,6 @@ export default function UsersManagement({ isSuperuser }: UsersManagementProps) {
         </CardContent>
       </Card>
       
-      {/* Edit User Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -460,7 +465,6 @@ export default function UsersManagement({ isSuperuser }: UsersManagementProps) {
                   
                 if (error) throw error;
                 
-                // Update local state
                 setUsers(users.map(user => 
                   user.id === selectedUser.id ? selectedUser : user
                 ));
@@ -486,7 +490,6 @@ export default function UsersManagement({ isSuperuser }: UsersManagementProps) {
         </DialogContent>
       </Dialog>
       
-      {/* Admin Access Dialog */}
       <Dialog open={isAdminDialogOpen} onOpenChange={setIsAdminDialogOpen}>
         <DialogContent>
           <DialogHeader>

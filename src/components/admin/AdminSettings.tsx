@@ -27,10 +27,21 @@ export default function AdminSettings({ isSuperuser }: AdminSettingsProps) {
       try {
         setLoading(true);
         
-        // Fetch admin users
+        // Fetch admin users with profiles data
         const { data: admins, error: adminsError } = await supabase
           .from('admin_users')
-          .select('*, profiles(first_name, last_name, email)');
+          .select(`
+            id,
+            role,
+            created_at,
+            created_by,
+            is_active,
+            profiles:id (
+              first_name,
+              last_name,
+              email
+            )
+          `);
           
         if (adminsError) {
           throw adminsError;
@@ -39,7 +50,13 @@ export default function AdminSettings({ isSuperuser }: AdminSettingsProps) {
         // Fetch audit logs
         const { data: logs, error: logsError } = await supabase
           .from('admin_audit_logs')
-          .select('*, profiles:admin_id(first_name, last_name)')
+          .select(`
+            *,
+            profiles:admin_id (
+              first_name,
+              last_name
+            )
+          `)
           .order('created_at', { ascending: false })
           .limit(50);
           
@@ -47,7 +64,7 @@ export default function AdminSettings({ isSuperuser }: AdminSettingsProps) {
           throw logsError;
         }
         
-        setAdminUsers(admins || []);
+        setAdminUsers(admins as AdminUser[] || []);
         setAuditLogs(logs || []);
       } catch (error) {
         console.error('Error fetching admin data:', error);
