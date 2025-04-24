@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -73,16 +74,21 @@ const Customers = () => {
       setLoading(true);
       if (!session?.user?.id) return;
       
-      const { data: companyIdData, error: companyIdError } = await supabase.rpc<string, null>('get_effective_user_company_id');
+      // Fix: Use the correct typing for the RPC function call
+      // Cast the return value to string to avoid type recursion
+      const { data, error: companyIdError } = await supabase.rpc(
+        'get_effective_user_company_id'
+      );
       
       if (companyIdError) {
         console.error("Error getting effective user company ID:", companyIdError);
         return;
       }
       
-      const companyId = companyIdData as string;
+      // Cast the data to string explicitly
+      const companyId = data as string;
 
-      const { data, error } = await supabase
+      const { data: customersData, error } = await supabase
         .from("customers")
         .select("*")
         .eq("company_id", companyId)
@@ -97,7 +103,7 @@ const Customers = () => {
         });
         return;
       }
-      setCustomers(data || []);
+      setCustomers(customersData || []);
     } catch (error) {
       console.error("Error in fetchCustomers:", error);
     } finally {
