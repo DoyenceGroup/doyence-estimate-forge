@@ -27,7 +27,7 @@ export default function AdminSettings({ isSuperuser }: AdminSettingsProps) {
       try {
         setLoading(true);
         
-        // Fetch admin users with profiles data
+        // Fetch admin users with profiles data - using inner join syntax
         const { data: admins, error: adminsError } = await supabase
           .from('admin_users')
           .select(`
@@ -36,7 +36,7 @@ export default function AdminSettings({ isSuperuser }: AdminSettingsProps) {
             created_at,
             created_by,
             is_active,
-            profiles:id (
+            profiles!id(
               first_name,
               last_name,
               email
@@ -52,7 +52,7 @@ export default function AdminSettings({ isSuperuser }: AdminSettingsProps) {
           .from('admin_audit_logs')
           .select(`
             *,
-            profiles:admin_id (
+            profiles!admin_id(
               first_name,
               last_name
             )
@@ -64,7 +64,13 @@ export default function AdminSettings({ isSuperuser }: AdminSettingsProps) {
           throw logsError;
         }
         
-        setAdminUsers(admins as AdminUser[] || []);
+        // Type assertion with proper handling
+        const processedAdmins = admins?.map(admin => ({
+          ...admin,
+          profiles: admin.profiles || { first_name: null, last_name: null, email: null }
+        })) as AdminUser[] || [];
+        
+        setAdminUsers(processedAdmins);
         setAuditLogs(logs || []);
       } catch (error) {
         console.error('Error fetching admin data:', error);
