@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,13 +15,14 @@ import { Building, Briefcase } from "lucide-react";
 import JoinCompany from "./JoinCompany";
 
 const ProfileSetupForm = () => {
+  const { user, profile } = useAuth();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [companyRole, setCompanyRole] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [website, setWebsite] = useState("");
-  const [address, setAddress] = useState(""); // Added missing address state
+  const [address, setAddress] = useState(""); 
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -29,7 +30,34 @@ const ProfileSetupForm = () => {
 
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, session } = useAuth();
+
+  // Load existing data from profile or user metadata
+  useEffect(() => {
+    if (user?.user_metadata) {
+      // Use data from user metadata if available (from signup)
+      setFirstName(user.user_metadata.first_name || "");
+      setLastName(user.user_metadata.last_name || "");
+    }
+    
+    if (profile) {
+      // Use data from profile if available
+      setFirstName(profile.first_name || firstName);
+      setLastName(profile.last_name || lastName);
+      setCompanyName(profile.company_name || "");
+      setPhoneNumber(profile.phone_number || "");
+      setCompanyRole(profile.company_role || "");
+      setWebsite(profile.website || "");
+      setAddress(profile.company_address || "");
+      
+      if (profile.logo_url) {
+        setLogoUrl(profile.logo_url);
+      }
+      
+      if (profile.profile_photo_url) {
+        setProfilePhotoUrl(profile.profile_photo_url);
+      }
+    }
+  }, [user, profile]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,6 +115,9 @@ const ProfileSetupForm = () => {
           profile_photo_url: profilePhotoUrl,
           logo_url: logoUrl,
           company_id: companyId,
+          company_name: companyName,
+          company_address: address,
+          website: website,
           profile_completed: true,
           updated_at: new Date().toISOString()
         })
