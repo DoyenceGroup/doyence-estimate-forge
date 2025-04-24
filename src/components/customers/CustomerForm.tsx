@@ -76,21 +76,38 @@ export function CustomerForm({
 
   useEffect(() => {
     const fetchCompanyMembers = async () => {
-      // Use raw SQL query instead of accessing the view directly
-      // This bypasses the TypeScript type checking issue
-      const { data, error } = await supabase
-        .rpc('get_active_company_members');
+      // Use a direct query approach instead of RPC
+      // Query the company_members and profiles tables directly
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select(`
+          id as user_id,
+          first_name,
+          last_name,
+          company_id
+        `)
+        .eq('company_id', user?.company_id)
+        .order('first_name');
 
       if (error) {
         console.error('Error fetching company members:', error);
         return;
       }
 
-      setCompanyMembers(data || []);
+      // Convert the data to the CompanyMember type
+      const members = profileData?.map(profile => ({
+        user_id: profile.user_id,
+        first_name: profile.first_name,
+        last_name: profile.last_name
+      })) || [];
+
+      setCompanyMembers(members);
     };
 
-    fetchCompanyMembers();
-  }, []);
+    if (user?.company_id) {
+      fetchCompanyMembers();
+    }
+  }, [user]);
 
   const form = useForm<CustomerFormType>({
     defaultValues: customer
