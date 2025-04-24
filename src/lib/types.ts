@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   email: string;
@@ -25,6 +24,12 @@ export interface Customer {
   email: string;
   phone: string;
   address: string;
+  lead_owner_id?: string | null;
+  cell_numbers?: string[];
+  emails?: string[];
+  lead_source?: string | null;
+  lead_source_description?: string | null;
+  last_name: string;
 }
 
 export interface UserProfile {

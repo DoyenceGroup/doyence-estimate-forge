@@ -195,6 +195,7 @@ export type Database = {
           emails: string[]
           id: string
           last_name: string
+          lead_owner_id: string | null
           lead_source: string | null
           lead_source_description: string | null
           name: string
@@ -208,6 +209,7 @@ export type Database = {
           emails?: string[]
           id?: string
           last_name: string
+          lead_owner_id?: string | null
           lead_source?: string | null
           lead_source_description?: string | null
           name: string
@@ -221,6 +223,7 @@ export type Database = {
           emails?: string[]
           id?: string
           last_name?: string
+          lead_owner_id?: string | null
           lead_source?: string | null
           lead_source_description?: string | null
           name?: string

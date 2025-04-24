@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { Input } from "@/components/ui/input";
@@ -43,7 +44,7 @@ type CustomerFormType = {
   emails: { value: string }[];
   address: string;
   lead_source: string;
-  lead_owner_id?: string;
+  lead_owner_id?: string | null;
   lead_source_description?: string;
 };
 
@@ -97,8 +98,10 @@ export function CustomerForm({
         last_name: profile.last_name
       })) || [];
 
+      // Check if current user is already included in the list
       const currentUserIncluded = members.some(member => member.user_id === user.id);
       
+      // If not, add current user to the list
       if (!currentUserIncluded && user.id) {
         members.push({
           user_id: user.id,
@@ -112,6 +115,15 @@ export function CustomerForm({
 
     if (user?.company_id) {
       fetchCompanyMembers();
+    } else {
+      // If no company_id, at least add the current user
+      if (user?.id) {
+        setCompanyMembers([{
+          user_id: user.id,
+          first_name: user.first_name || "Current",
+          last_name: user.last_name || "User"
+        }]);
+      }
     }
   }, [user]);
 
@@ -128,7 +140,7 @@ export function CustomerForm({
             [{ value: "" }],
           address: customer.address || "",
           lead_source: customer.lead_source || "",
-          lead_owner_id: customer.lead_owner_id || user?.id,
+          lead_owner_id: customer.lead_owner_id || user?.id || null,
           lead_source_description: customer.lead_source_description || "",
         }
       : {
@@ -138,7 +150,7 @@ export function CustomerForm({
           emails: [{ value: "" }],
           address: "",
           lead_source: "",
-          lead_owner_id: user?.id,
+          lead_owner_id: user?.id || null,
           lead_source_description: "",
         },
   });
@@ -186,12 +198,14 @@ export function CustomerForm({
         emails: values.emails.map((e) => e.value).filter(Boolean),
         address: values.address,
         lead_source: values.lead_source,
-        lead_owner_id: values.lead_owner_id,
+        lead_owner_id: values.lead_owner_id || null,
         lead_source_description:
           values.lead_source === "Other"
             ? values.lead_source_description
             : null,
       };
+
+      console.log("Saving customer with data:", newCustomer);
 
       let result;
       if (customer) {
@@ -452,7 +466,7 @@ export function CustomerForm({
               <FormLabel>Lead Owner</FormLabel>
               <FormControl>
                 <Select
-                  value={field.value}
+                  value={field.value || ''}
                   onValueChange={(val) => field.onChange(val)}
                 >
                   <SelectTrigger>
@@ -464,7 +478,7 @@ export function CustomerForm({
                         key={member.user_id} 
                         value={member.user_id}
                       >
-                        {member.first_name} {member.last_name}
+                        {member.first_name || ''} {member.last_name || ''}
                       </SelectItem>
                     ))}
                   </SelectContent>
