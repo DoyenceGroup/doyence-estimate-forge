@@ -1,4 +1,3 @@
-
 import {
   createContext,
   useContext,
@@ -17,11 +16,15 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   profile: null,
   isLoading: true,
+  isSuperuser: false,
+  isAdmin: false,
   signInWithEmailAndPassword: async () => {},
   signUp: async () => {},
   signOut: async () => {},
   verifyOtp: async () => {},
   resendOtp: async () => {},
+  impersonateUser: async () => {},
+  endImpersonation: async () => {},
   supabase: supabase,
 });
 
@@ -30,6 +33,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSuperuser, setIsSuperuser] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [originalUser, setOriginalUser] = useState<any>(null);
+  const [isImpersonating, setIsImpersonating] = useState(false);
 
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -44,6 +51,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (!session) {
         setProfile(null);
+        setIsSuperuser(false);
+        setIsAdmin(false);
+        setOriginalUser(null);
+        setIsImpersonating(false);
       }
     });
 
@@ -81,6 +92,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     getSession();
   }, [toast]);
+
+  // Check admin status when user changes
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!user?.id) return;
+      
+      try {
+        // Check if user is a superuser
+        const { data: superuserData, error: superuserError } = await supabase.rpc('is_superuser');
+        
+        if (superuserError) {
+          console.error("Error checking superuser status:", superuserError);
+        } else {
+          setIsSuperuser(!!superuserData);
+        }
+        
+        // Check if user is an admin
+        const { data: adminData, error: adminError } = await supabase.rpc('is_admin');
+        
+        if (adminError) {
+          console.error("Error checking admin status:", adminError);
+        } else {
+          setIsAdmin(!!adminData);
+        }
+      } catch (err) {
+        console.error("Error checking admin status:", err);
+      }
+    };
+
+    if (user) {
+      checkAdminStatus();
+    } else {
+      setIsSuperuser(false);
+      setIsAdmin(false);
+    }
+  }, [user]);
 
   // Fetch profile when user changes
   useEffect(() => {
@@ -122,7 +169,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             company_email: data.company_email || null,
             company_address: data.company_address || null,
             logo_url: data.logo_url || null,
-            website: data.website || null
+            website: data.website || null,
+            status: data.status || "active"
           };
           setProfile(profileData);
         }
@@ -267,9 +315,173 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const impersonateUser = async (userId: string) => {
+    try {
+      setIsLoading(true);
+      
+      // Store current user before impersonation
+      if (!isImpersonating) {
+        setOriginalUser({
+          id: user.id,
+          session: session
+        });
+      }
+      
+      // Call the RPC function to impersonate user
+      const { data, error } = await supabase.rpc('admin_impersonate_user', {
+        user_id: userId
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Fetch the impersonated user profile
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
+        
+      if (profileError) {
+        throw profileError;
+      }
+      
+      // Update state to reflect impersonation
+      setIsImpersonating(true);
+      
+      // Set the impersonated user data
+      const impersonatedUser = {
+        ...user,
+        id: userId,
+        impersonated: true
+      };
+      
+      setUser(impersonatedUser);
+      
+      // Create a profile object for the impersonated user
+      const profileData2: UserProfile = {
+        id: profileData.id || "",
+        user_id: profileData.id || "",
+        email: profileData.company_email || null,
+        first_name: profileData.first_name || null,
+        last_name: profileData.last_name || null,
+        phone_number: profileData.phone_number || null,
+        profile_photo_url: profileData.profile_photo_url || null,
+        company_role: profileData.company_role || null,
+        role: profileData.role || null,
+        profile_completed: profileData.profile_completed || false,
+        company_id: profileData.company_id || null,
+        company_name: profileData.company_name || null,
+        company_email: profileData.company_email || null,
+        company_address: profileData.company_address || null,
+        logo_url: profileData.logo_url || null,
+        website: profileData.website || null,
+        status: profileData.status || "active"
+      };
+      
+      setProfile(profileData2);
+      
+      toast({
+        title: "Impersonation active",
+        description: `You are now viewing as ${profileData2.first_name || ''} ${profileData2.last_name || ''}`,
+      });
+      
+      // Navigate to dashboard
+      navigate("/dashboard");
+      
+    } catch (error: any) {
+      console.error("Impersonation error:", error);
+      toast({
+        variant: "destructive",
+        title: "Impersonation failed",
+        description: error.message || "Could not impersonate user",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const endImpersonation = async () => {
+    if (!isImpersonating || !originalUser) {
+      return;
+    }
+    
+    try {
+      setIsLoading(true);
+      
+      // Restore original user and session
+      setUser(originalUser);
+      setSession(originalUser.session);
+      
+      // Reset impersonation state
+      setIsImpersonating(false);
+      setOriginalUser(null);
+      
+      // Re-fetch original user profile
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", originalUser.id)
+        .single();
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Create a profile object for the original user
+      const profileData: UserProfile = {
+        id: data.id || "",
+        user_id: data.id || "",
+        email: data.company_email || null,
+        first_name: data.first_name || null,
+        last_name: data.last_name || null,
+        phone_number: data.phone_number || null,
+        profile_photo_url: data.profile_photo_url || null,
+        company_role: data.company_role || null,
+        role: data.role || null,
+        profile_completed: data.profile_completed || false,
+        company_id: data.company_id || null,
+        company_name: data.company_name || null,
+        company_email: data.company_email || null,
+        company_address: data.company_address || null,
+        logo_url: data.logo_url || null,
+        website: data.website || null,
+        status: data.status || "active"
+      };
+      
+      setProfile(profileData);
+      
+      toast({
+        title: "Impersonation ended",
+        description: "You've returned to your admin account",
+      });
+      
+      // Navigate back to admin dashboard
+      navigate("/admin");
+      
+    } catch (error: any) {
+      console.error("Error ending impersonation:", error);
+      toast({
+        variant: "destructive",
+        title: "Error ending impersonation",
+        description: error.message || "Could not end impersonation session",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const signOut = async () => {
     try {
       setIsLoading(true);
+      
+      // If impersonating, end impersonation instead of signing out
+      if (isImpersonating && originalUser) {
+        await endImpersonation();
+        return;
+      }
+      
       const { error } = await supabase.auth.signOut();
 
       if (error) throw error;
@@ -299,11 +511,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         user,
         profile,
         isLoading,
+        isSuperuser,
+        isAdmin,
         signInWithEmailAndPassword,
         signUp,
         signOut,
         verifyOtp,
         resendOtp,
+        impersonateUser,
+        endImpersonation,
         supabase,
       }}
     >

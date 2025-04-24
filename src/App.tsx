@@ -1,3 +1,4 @@
+
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -11,6 +12,8 @@ import ProfileSetup from "@/pages/profile-setup";
 import Index from "@/pages/Index";
 import Settings from "@/pages/company/Settings";
 import Customers from "@/pages/customers";
+import AdminDashboard from "@/pages/admin"; 
+import ImpersonationBanner from "@/components/layout/ImpersonationBanner";
 import { Toaster } from "@/components/ui/toaster";
 import { CSSTransition, TransitionGroup } from "react-transition-group";
 import "./route-transitions.css";
@@ -39,6 +42,27 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   }
   
   return session ? children : <Navigate to="/login" />;
+};
+
+const AdminRoute = ({ children }: { children: JSX.Element }) => {
+  const { session, isLoading, isAdmin, isSuperuser } = useAuth();
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
+  
+  useEffect(() => {
+    if (!isLoading) {
+      setHasCheckedAuth(true);
+    }
+  }, [isLoading]);
+  
+  if (!hasCheckedAuth) {
+    return <LoadingSpinner />;
+  }
+  
+  if (!session) {
+    return <Navigate to="/login" />;
+  }
+  
+  return (isAdmin || isSuperuser) ? children : <Navigate to="/dashboard" />;
 };
 
 const UnauthenticatedOnlyRoute = ({ children }: { children: JSX.Element }) => {
@@ -70,69 +94,80 @@ const AnimatedRoutes = () => {
   const location = useLocation();
 
   return (
-    <TransitionGroup>
-      <CSSTransition 
-        key={location.pathname} 
-        classNames="route-fade" 
-        timeout={300}
-        mountOnEnter
-        unmountOnExit
-      >
-        <Routes location={location}>
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile-setup"
-            element={
-              <ProtectedRoute>
-                <ProfileSetup />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <Settings />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/customers"
-            element={
-              <ProtectedRoute>
-                <Customers />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/login"
-            element={
-              <UnauthenticatedOnlyRoute>
-                <Login />
-              </UnauthenticatedOnlyRoute>
-            }
-          />
-          <Route
-            path="/signup"
-            element={
-              <UnauthenticatedOnlyRoute>
-                <Signup />
-              </UnauthenticatedOnlyRoute>
-            }
-          />
-          <Route path="/verify" element={<Verify />} />
-          <Route path="/" element={<Index />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </CSSTransition>
-    </TransitionGroup>
+    <>
+      <ImpersonationBanner />
+      <TransitionGroup>
+        <CSSTransition 
+          key={location.pathname} 
+          classNames="route-fade" 
+          timeout={300}
+          mountOnEnter
+          unmountOnExit
+        >
+          <Routes location={location}>
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile-setup"
+              element={
+                <ProtectedRoute>
+                  <ProfileSetup />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <Settings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/customers"
+              element={
+                <ProtectedRoute>
+                  <Customers />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <AdminRoute>
+                  <AdminDashboard />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/login"
+              element={
+                <UnauthenticatedOnlyRoute>
+                  <Login />
+                </UnauthenticatedOnlyRoute>
+              }
+            />
+            <Route
+              path="/signup"
+              element={
+                <UnauthenticatedOnlyRoute>
+                  <Signup />
+                </UnauthenticatedOnlyRoute>
+              }
+            />
+            <Route path="/verify" element={<Verify />} />
+            <Route path="/" element={<Index />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </CSSTransition>
+      </TransitionGroup>
+    </>
   );
 };
 

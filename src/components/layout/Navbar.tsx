@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Menu, LogOut, Settings } from "lucide-react";
+import { Menu, LogOut, Settings, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -20,7 +20,7 @@ interface NavbarProps {
 }
 
 const Navbar = ({ onMobileMenuToggle }: NavbarProps) => {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, isAdmin, isSuperuser } = useAuth();
   const { themeColor } = useTheme();
   const navigate = useNavigate();
 
@@ -31,6 +31,10 @@ const Navbar = ({ onMobileMenuToggle }: NavbarProps) => {
 
   const handleSettingsClick = () => {
     navigate("/settings");
+  };
+  
+  const handleAdminClick = () => {
+    navigate("/admin");
   };
 
   return (
@@ -59,51 +63,79 @@ const Navbar = ({ onMobileMenuToggle }: NavbarProps) => {
           {/* Right section - User menu */}
           <div className="flex items-center gap-4">
             {user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+              <>
+                {/* Admin Dashboard Link (only for admins/superusers) */}
+                {(isAdmin || isSuperuser) && (
                   <Button
-                    variant="ghost"
-                    className="flex items-center gap-2 hover:bg-gray-100 rounded-full px-3 py-2"
+                    variant="outline"
+                    size="sm"
+                    className="hidden sm:flex items-center gap-2"
+                    onClick={handleAdminClick}
                   >
-                    <Avatar className="h-8 w-8">
-                      {profile?.profile_photo_url ? (
-                        <AvatarImage src={profile.profile_photo_url} alt="Profile" />
-                      ) : (
-                        <AvatarFallback style={{ backgroundColor: themeColor + '20', color: themeColor }}>
-                          {profile?.first_name?.charAt(0) ?? user.email?.charAt(0) ?? "U"}
-                        </AvatarFallback>
-                      )}
-                    </Avatar>
-                    <span className="hidden sm:inline-block font-medium text-sm">
-                      {profile?.first_name
-                        ? `${profile.first_name}${profile.last_name ? " " + profile.last_name : ""}`
-                        : user.email?.split('@')[0] || "User"}
-                    </span>
+                    <Shield className="h-4 w-4" />
+                    Admin
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <div className="px-4 py-3">
-                    <p className="text-sm font-medium">
-                      {profile?.email || user.email}
-                    </p>
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem 
-                    className="cursor-pointer flex items-center gap-2"
-                    onClick={handleSettingsClick}
-                  >
-                    <Settings className="h-4 w-4" />
-                    <span>Settings</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    className="cursor-pointer flex items-center gap-2 text-red-600"
-                    onClick={handleLogout}
-                  >
-                    <LogOut className="h-4 w-4" />
-                    <span>Logout</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                )}
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="flex items-center gap-2 hover:bg-gray-100 rounded-full px-3 py-2"
+                    >
+                      <Avatar className="h-8 w-8">
+                        {profile?.profile_photo_url ? (
+                          <AvatarImage src={profile.profile_photo_url} alt="Profile" />
+                        ) : (
+                          <AvatarFallback style={{ backgroundColor: themeColor + '20', color: themeColor }}>
+                            {profile?.first_name?.charAt(0) ?? user.email?.charAt(0) ?? "U"}
+                          </AvatarFallback>
+                        )}
+                      </Avatar>
+                      <span className="hidden sm:inline-block font-medium text-sm">
+                        {profile?.first_name
+                          ? `${profile.first_name}${profile.last_name ? " " + profile.last_name : ""}`
+                          : user.email?.split('@')[0] || "User"}
+                      </span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <div className="px-4 py-3">
+                      <p className="text-sm font-medium">
+                        {profile?.email || user.email}
+                      </p>
+                    </div>
+                    <DropdownMenuSeparator />
+                    {/* Show Admin link in dropdown for mobile */}
+                    {(isAdmin || isSuperuser) && (
+                      <>
+                        <DropdownMenuItem 
+                          className="cursor-pointer flex items-center gap-2 sm:hidden"
+                          onClick={handleAdminClick}
+                        >
+                          <Shield className="h-4 w-4" />
+                          <span>Admin Dashboard</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator className="sm:hidden" />
+                      </>
+                    )}
+                    <DropdownMenuItem 
+                      className="cursor-pointer flex items-center gap-2"
+                      onClick={handleSettingsClick}
+                    >
+                      <Settings className="h-4 w-4" />
+                      <span>Settings</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      className="cursor-pointer flex items-center gap-2 text-red-600"
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>Logout</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
             ) : (
               <Button 
                 size="sm" 

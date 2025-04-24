@@ -42,6 +42,81 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_audit_logs: {
+        Row: {
+          action: string
+          admin_id: string
+          created_at: string
+          details: Json | null
+          entity_id: string
+          entity_type: string
+          id: string
+        }
+        Insert: {
+          action: string
+          admin_id: string
+          created_at?: string
+          details?: Json | null
+          entity_id: string
+          entity_type: string
+          id?: string
+        }
+        Update: {
+          action?: string
+          admin_id?: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      admin_users: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          role: Database["public"]["Enums"]["user_role"]
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id: string
+          is_active?: boolean | null
+          role?: Database["public"]["Enums"]["user_role"]
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          role?: Database["public"]["Enums"]["user_role"]
+        }
+        Relationships: []
+      }
+      analytics_cache: {
+        Row: {
+          calculated_at: string
+          id: string
+          metric_name: string
+          metric_value: Json
+        }
+        Insert: {
+          calculated_at?: string
+          id?: string
+          metric_name: string
+          metric_value: Json
+        }
+        Update: {
+          calculated_at?: string
+          id?: string
+          metric_name?: string
+          metric_value?: Json
+        }
+        Relationships: []
+      }
       companies: {
         Row: {
           address: string | null
@@ -282,6 +357,7 @@ export type Database = {
           profile_completed: boolean | null
           profile_photo_url: string | null
           role: string | null
+          status: string | null
           updated_at: string | null
           website: string | null
         }
@@ -300,6 +376,7 @@ export type Database = {
           profile_completed?: boolean | null
           profile_photo_url?: string | null
           role?: string | null
+          status?: string | null
           updated_at?: string | null
           website?: string | null
         }
@@ -318,6 +395,7 @@ export type Database = {
           profile_completed?: boolean | null
           profile_photo_url?: string | null
           role?: string | null
+          status?: string | null
           updated_at?: string | null
           website?: string | null
         }
@@ -369,6 +447,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_impersonate_user: {
+        Args: { user_id: string }
+        Returns: Json
+      }
+      calculate_avg_users_per_company: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      calculate_total_companies: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      calculate_total_customers: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      calculate_total_users: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       check_company_membership: {
         Args: { check_company_id: string; check_user_id: string }
         Returns: boolean
@@ -385,13 +483,30 @@ export type Database = {
         Args: { user_uuid: string }
         Returns: string
       }
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       is_company_member: {
         Args: { company_uuid: string; user_uuid: string }
+        Returns: boolean
+      }
+      is_superuser: {
+        Args: Record<PropertyKey, never>
         Returns: boolean
       }
       is_user_company_member: {
         Args: { company_uuid: string; user_uuid: string }
         Returns: boolean
+      }
+      log_admin_action: {
+        Args: {
+          action_type: string
+          entity_type: string
+          entity_id: string
+          details?: Json
+        }
+        Returns: undefined
       }
       user_is_company_member: {
         Args: { _company_id: string }
@@ -399,7 +514,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      user_role: "user" | "admin" | "superuser"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -514,6 +629,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      user_role: ["user", "admin", "superuser"],
+    },
   },
 } as const

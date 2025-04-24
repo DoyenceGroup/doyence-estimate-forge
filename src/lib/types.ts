@@ -1,3 +1,4 @@
+
 export interface User {
   id: string;
   email: string;
@@ -49,6 +50,7 @@ export interface UserProfile {
   company_address: string | null;
   logo_url: string | null;
   website: string | null;
+  status?: string | null;
 }
 
 export interface TeamMemberProfile {
@@ -91,4 +93,38 @@ export interface CompanyInvitation {
   created_at: string;
   expires_at?: string;
   created_by: string;
+}
+
+export interface AdminAuditLog {
+  id: string;
+  admin_id: string;
+  action: string;
+  entity_type: string;
+  entity_id: string;
+  details?: Record<string, any>;
+  created_at: string;
+}
+
+export interface AdminUser {
+  id: string;
+  role: 'admin' | 'superuser';
+  created_at: string;
+  created_by?: string;
+  is_active: boolean;
+}
+
+export interface AnalyticsData {
+  total_users: number;
+  total_companies: number;
+  total_customers: number;
+  avg_users_per_company: number;
+  logins_per_day?: {
+    date: string;
+    count: number;
+  }[];
+  active_companies?: {
+    id: string;
+    name: string;
+    activity_count: number;
+  }[];
 }
